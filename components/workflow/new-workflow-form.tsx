@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Rocket, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,7 +28,7 @@ type FormData = z.infer<typeof formSchema>
 export default function NewWorkflowForm({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createSupabaseClient()
+  const supabase = createClientComponentClient()
 
   const {
     register,

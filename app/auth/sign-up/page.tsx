@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react'
 import GoogleAuthButton from '@/components/auth/google-auth-button'
 
@@ -16,7 +16,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false)
   
   const router = useRouter()
-  const supabase = createSupabaseClient()
+  const supabase = createClientComponentClient()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()

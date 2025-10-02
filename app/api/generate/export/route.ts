@@ -1,13 +1,13 @@
 // Export Generation API - Creates downloadable ZIP with all blueprint files
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import JSZip from 'jszip'
 import { ProcessedPlan, ModuleStructure, ClaudePrompt } from '@/lib/ai/types'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -351,7 +351,7 @@ ${plan.structure.map(m => `
 ### ${m.name}
 - **Path**: ${m.path}
 - **Dependencies**: ${m.dependencies.join(', ') || 'None'}
-- **MCP Servers**: ${m.mcpServers.join(', ') || 'None'}
+- **MCP Servers**: ${m.mcpServers?.join(', ') || 'None'}
 - **Key Constraints**:
 ${m.constraints.map(c => `  - ${c}`).join('\n')}
 `).join('\n')}

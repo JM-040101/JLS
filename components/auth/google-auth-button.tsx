@@ -1,11 +1,11 @@
 'use client'
 
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useState } from 'react'
 
 export default function GoogleAuthButton() {
   const [loading, setLoading] = useState(false)
-  const supabase = createSupabaseClient()
+  const supabase = createClientComponentClient()
 
   const handleGoogleSignIn = async () => {
     setLoading(true)

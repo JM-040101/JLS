@@ -1,11 +1,11 @@
 // AI Metrics and Cost Tracking
 
 import { AIMetrics } from './types'
-import { createSupabaseClient } from '../supabase-server'
+import { createSupabaseServerClient } from '../supabase-server'
 
 export async function logMetrics(metrics: AIMetrics): Promise<void> {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { error } = await supabase
       .from('ai_metrics')
@@ -36,7 +36,7 @@ export async function getUserUsage(userId: string, period: 'day' | 'month'): Pro
   requestCount: number
   successRate: number
 }> {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   const startDate = new Date()
   if (period === 'day') {
@@ -82,7 +82,7 @@ export async function getSessionMetrics(sessionId: string): Promise<{
   totalTime: number
   averageLatency: number
 }> {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   const { data, error } = await supabase
     .from('ai_metrics')

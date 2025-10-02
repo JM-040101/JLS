@@ -1,7 +1,7 @@
 // Main Export Generation API
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ExportOrchestrator } from '@/lib/export/orchestrator'
 import { ExportRequest } from '@/lib/export/types'
 
@@ -9,7 +9,7 @@ export const maxDuration = 60 // Allow up to 60 seconds for export generation
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -139,7 +139,7 @@ async function logExportGeneration(
   result: any
 ): Promise<void> {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     await supabase
       .from('export_logs')

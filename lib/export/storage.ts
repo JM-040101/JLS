@@ -1,6 +1,6 @@
 // Supabase Storage Integration for Exports
 
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { ExportMetadata } from './types'
 
 export interface StorageUploadResult {
@@ -36,7 +36,7 @@ export class ExportStorage {
     metadata: ExportMetadata
   ): Promise<StorageUploadResult> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       // Generate unique filename
       const timestamp = Date.now()
@@ -101,7 +101,7 @@ export class ExportStorage {
     expiresIn: number = 3600
   ): Promise<{ url?: string; error?: string }> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { data, error } = await supabase.storage
         .from(this.bucketName)
@@ -120,7 +120,7 @@ export class ExportStorage {
   // Download export file
   async downloadExport(path: string): Promise<{ data?: Buffer; error?: string }> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { data, error } = await supabase.storage
         .from(this.bucketName)
@@ -141,7 +141,7 @@ export class ExportStorage {
   // Delete export file
   async deleteExport(path: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { error } = await supabase.storage
         .from(this.bucketName)
@@ -163,7 +163,7 @@ export class ExportStorage {
   // List exports for a user
   async listUserExports(userId: string): Promise<ExportRecord[]> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { data, error } = await supabase
         .from('exports')
@@ -198,7 +198,7 @@ export class ExportStorage {
   // Get export by session ID
   async getSessionExport(sessionId: string): Promise<ExportRecord | null> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { data, error } = await supabase
         .from('exports')
@@ -234,7 +234,7 @@ export class ExportStorage {
   // Private methods
   
   private async ensureBucketExists(): Promise<void> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Check if bucket exists
     const { data: buckets } = await supabase.storage.listBuckets()
@@ -262,7 +262,7 @@ export class ExportStorage {
     version: string
   }): Promise<void> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       await supabase
         .from('exports')
@@ -285,7 +285,7 @@ export class ExportStorage {
   
   private async deleteExportRecord(path: string): Promise<void> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       await supabase
         .from('exports')
@@ -299,7 +299,7 @@ export class ExportStorage {
   // Cleanup expired exports
   async cleanupExpiredExports(): Promise<number> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       // Find expired exports
       const { data: expired } = await supabase
@@ -338,7 +338,7 @@ export class ExportStorage {
     newestExport?: Date
   }> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       const { data } = await supabase
         .from('exports')

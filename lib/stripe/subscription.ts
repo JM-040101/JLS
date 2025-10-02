@@ -1,7 +1,7 @@
 // Subscription Management Utilities
 
 import { stripe, SUBSCRIPTION_STATUS, GRACE_PERIOD_DAYS } from './config'
-import { createSupabaseClient } from '../supabase-server'
+import { createSupabaseServerClient } from '../supabase-server'
 import type { SubscriptionStatus } from './config'
 
 export interface Subscription {
@@ -33,7 +33,7 @@ export class SubscriptionManager {
     canceledAt?: Date
     trialEnd?: Date
   }): Promise<Subscription> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data: subscription, error } = await supabase
       .from('subscriptions')
@@ -62,7 +62,7 @@ export class SubscriptionManager {
 
   // Get subscription by user ID
   async getSubscriptionByUserId(userId: string): Promise<Subscription | null> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data, error } = await supabase
       .from('subscriptions')
@@ -79,7 +79,7 @@ export class SubscriptionManager {
 
   // Get subscription by Stripe customer ID
   async getSubscriptionByCustomerId(customerId: string): Promise<Subscription | null> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data, error } = await supabase
       .from('subscriptions')
@@ -236,7 +236,7 @@ export class SubscriptionManager {
     }
 
     // Get current month's session count
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
@@ -264,7 +264,7 @@ export class SubscriptionManager {
     storageUsedMB: number
     lastActivityDate?: Date
   }> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
@@ -307,7 +307,7 @@ export class SubscriptionManager {
     })
 
     // Store customer ID
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     await supabase
       .from('profiles')
       .update({
@@ -320,7 +320,7 @@ export class SubscriptionManager {
 
   // Get or create Stripe customer
   async getOrCreateStripeCustomer(userId: string, email: string): Promise<string> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Check if customer already exists
     const { data: profile } = await supabase

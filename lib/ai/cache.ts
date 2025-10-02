@@ -1,7 +1,7 @@
 // Response Caching Implementation
 
 import { CACHE_CONFIG } from './config'
-import { createSupabaseClient } from '../supabase-server'
+import { createSupabaseServerClient } from '../supabase-server'
 
 interface CacheEntry {
   key: string
@@ -22,7 +22,7 @@ export async function getCachedResponse(key: string): Promise<string | null> {
   }
   
   // Check database cache
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   const { data, error } = await supabase
     .from('ai_cache')
     .select('*')
@@ -71,7 +71,7 @@ export async function setCachedResponse(key: string, value: string): Promise<voi
   }
   
   // Store in database
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   await supabase
     .from('ai_cache')
     .upsert({
@@ -86,17 +86,17 @@ export async function setCachedResponse(key: string, value: string): Promise<voi
 export async function invalidateCache(pattern?: string): Promise<void> {
   // Clear memory cache
   if (pattern) {
-    for (const key of memoryCache.keys()) {
+    Array.from(memoryCache.keys()).forEach(key => {
       if (key.includes(pattern)) {
         memoryCache.delete(key)
       }
-    }
+    })
   } else {
     memoryCache.clear()
   }
   
   // Clear database cache
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   if (pattern) {
     await supabase
       .from('ai_cache')
@@ -115,14 +115,14 @@ setInterval(async () => {
   const now = new Date()
   
   // Clean memory cache
-  for (const [key, entry] of memoryCache.entries()) {
+  Array.from(memoryCache.entries()).forEach(([key, entry]) => {
     if (entry.expiresAt <= now) {
       memoryCache.delete(key)
     }
-  }
+  })
   
   // Clean database cache
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   await supabase
     .from('ai_cache')
     .delete()

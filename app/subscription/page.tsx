@@ -1,14 +1,14 @@
 // Subscription Management Page
 
 import { redirect } from 'next/navigation'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { subscriptionManager } from '@/lib/stripe/subscription'
 import { SubscriptionDetails } from '@/components/subscription/subscription-details'
 import { SubscriptionUsage } from '@/components/subscription/subscription-usage'
 import { BillingHistory } from '@/components/subscription/billing-history'
 
 export default async function SubscriptionPage() {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   // Get authenticated user
   const { data: { user }, error: authError } = await supabase.auth.getUser()

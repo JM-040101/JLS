@@ -5,7 +5,7 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { stripe, WEBHOOK_EVENTS } from '@/lib/stripe/config'
 import { subscriptionManager } from '@/lib/stripe/subscription'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -227,7 +227,7 @@ async function handleInvoicePaid(event: Stripe.Event) {
   }
 
   // Log successful payment
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   await supabase
     .from('payment_history')
     .insert({
@@ -262,7 +262,7 @@ async function handleInvoicePaymentFailed(event: Stripe.Event) {
   await sendPaymentFailureEmail(userId, customer.email || '')
 
   // Log failed payment
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   await supabase
     .from('payment_history')
     .insert({
@@ -296,7 +296,7 @@ async function handlePaymentMethodAttached(event: Stripe.Event) {
 // Helper functions
 
 async function logWebhookEvent(event: Stripe.Event) {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   try {
     await supabase
@@ -313,7 +313,7 @@ async function logWebhookEvent(event: Stripe.Event) {
 }
 
 async function logWebhookError(event: Stripe.Event, error: Error) {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   try {
     await supabase
@@ -352,7 +352,7 @@ async function handlePastDueSubscription(userId: string) {
 
 async function revokeUserAccess(userId: string) {
   // Update user access level
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   await supabase
     .from('profiles')

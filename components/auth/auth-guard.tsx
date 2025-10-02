@@ -20,17 +20,11 @@ export default function AuthGuard({
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading) {
-      if (!session) {
-        router.push(fallbackUrl)
-      } else if (requireSubscription && user) {
-        // Check subscription status
-        if (user.subscription_status !== 'active') {
-          router.push('/pricing')
-        }
-      }
+    if (!loading && !session) {
+      router.push(fallbackUrl)
     }
-  }, [loading, session, user, requireSubscription, fallbackUrl, router])
+    // TODO: Add subscription status check by fetching profile data
+  }, [loading, session, fallbackUrl, router])
 
   if (loading) {
     return (
@@ -41,10 +35,6 @@ export default function AuthGuard({
   }
 
   if (!session) {
-    return null
-  }
-
-  if (requireSubscription && user?.subscription_status !== 'active') {
     return null
   }
 

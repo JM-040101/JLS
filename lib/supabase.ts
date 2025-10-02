@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')
 
 // Client component client (for use in client components)
-export const createSupabaseClient = () => {
+export const createSupabaseServerClient = () => {
   return createClientComponentClient()
 }
 

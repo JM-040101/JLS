@@ -1,16 +1,16 @@
 // Workflow Questions API - Get phase-specific questions from GPT-5
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { AIClient } from '@/lib/ai/client'
 import { AI_MODELS, SYSTEM_INSTRUCTIONS, CACHE_CONFIG } from '@/lib/ai/config'
 import { generateCacheKey } from '@/lib/ai/cache'
 import { PhaseResponse, WorkflowContext } from '@/lib/ai/types'
-import { PHASES } from '@/lib/constants'
+import { WORKFLOW_PHASES as PHASES } from '@/lib/constants'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -64,23 +64,19 @@ export async function POST(request: NextRequest) {
 
     // Generate questions using GPT-5
     const aiClient = new AIClient(user.id, sessionId)
-    
+
+    // Build conversation history context
+    const historyContext = answers && answers.length > 0
+      ? `Previous conversation:\n${buildConversationHistory(answers)}\n\n`
+      : ''
+
     // Build messages for GPT-5
     const messages = [
       {
         role: 'user' as const,
-        content: buildQuestionPrompt(context, phaseNumber)
+        content: historyContext + buildQuestionPrompt(context, phaseNumber)
       }
     ]
-
-    // Add previous conversation history if available
-    if (answers && answers.length > 0) {
-      const history = buildConversationHistory(answers)
-      messages.unshift({
-        role: 'assistant' as const,
-        content: history
-      })
-    }
 
     // Generate cache key for common initial phases
     const cacheKey = CACHE_CONFIG.enabledForPhases.includes(phaseNumber)
@@ -112,7 +108,7 @@ export async function POST(request: NextRequest) {
       .from('phase_templates')
       .upsert({
         phase_number: phaseNumber,
-        name: PHASES[phaseNumber - 1].name,
+        name: PHASES[phaseNumber - 1].title,
         questions: phaseResponse.questions,
         updated_at: new Date().toISOString()
       })
@@ -144,12 +140,12 @@ You are helping build a comprehensive blueprint for a SaaS business.
 
 Business Idea: ${context.businessIdea}
 Target Audience: ${context.targetAudience || 'Not specified yet'}
-Current Phase: ${phase.name} (Phase ${phaseNumber} of 12)
+Current Phase: ${phase.title} (Phase ${phaseNumber} of 12)
 
 Previous answers have been collected for phases 1-${phaseNumber - 1}.
 ${context.previousAnswers ? `Key insights so far: ${JSON.stringify(context.previousAnswers, null, 2)}` : ''}
 
-Generate 5-8 specific, actionable questions for the ${phase.name} phase.
+Generate 5-8 specific, actionable questions for the ${phase.title} phase.
 Each question should:
 1. Build upon previous answers
 2. Be specific to their business idea
@@ -185,7 +181,7 @@ function buildConversationHistory(answers: any[]): string {
   return answers
     .map(answer => {
       const phase = PHASES[answer.phase_number - 1]
-      return `Phase ${answer.phase_number} (${phase.name}): User provided detailed answers about ${phase.description}`
+      return `Phase ${answer.phase_number} (${phase.title}): User provided detailed answers about ${phase.description}`
     })
     .join('\n')
 }
@@ -213,8 +209,8 @@ function parseGPTResponse(response: string, phaseNumber: number): PhaseResponse 
   return {
     phaseNumber,
     questions: getDefaultQuestions(phaseNumber),
-    guidance: `Let's explore ${phase.name} for your SaaS business.`,
-    nextPhasePreview: phaseNumber < 12 ? `Next, we'll cover ${PHASES[phaseNumber].name}` : undefined
+    guidance: `Let's explore ${phase.title} for your SaaS business.`,
+    nextPhasePreview: phaseNumber < 12 ? `Next, we'll cover ${PHASES[phaseNumber].title}` : undefined
   }
 }
 
@@ -242,7 +238,7 @@ function getDefaultQuestions(phaseNumber: number): any[] {
 
   return defaults[phaseNumber] || [{
     id: 'q1',
-    question: `Tell us about your approach to ${PHASES[phaseNumber - 1].name}`,
+    question: `Tell us about your approach to ${PHASES[phaseNumber - 1].title}`,
     type: 'text',
     required: true,
     placeholder: 'Provide details'

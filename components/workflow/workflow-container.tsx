@@ -7,7 +7,7 @@ import PhaseProgress from './phase-progress'
 import PhaseSidebar from './phase-sidebar'
 import PhaseContent from './phase-content'
 import WorkflowHeader from './workflow-header'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -36,7 +36,7 @@ export default function WorkflowContainer({
   const [sessionStatus, setSessionStatus] = useState(session.status)
   
   const router = useRouter()
-  const supabase = createSupabaseClient()
+  const supabase = createClientComponentClient()
 
   // Auto-save answers with debounce
   useEffect(() => {

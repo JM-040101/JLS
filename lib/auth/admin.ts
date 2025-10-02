@@ -1,6 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 
 export interface AdminUser {
   id: string
@@ -269,47 +267,18 @@ export class AdminManager {
 }
 
 // Middleware helper for API routes
+// NOTE: This function should be used in API routes (server-side only)
+// Import createRouteHandlerClient and cookies in the API route file
 export async function requireAdmin(
-  request: Request,
-  handler: Function
-): Promise<Response> {
-  const supabase = createRouteHandlerClient({ cookies })
-  const adminManager = new AdminManager(supabase)
-  
-  // Check if user is authenticated
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
+  supabaseClient: any,
+  userId: string
+): Promise<{ isAdmin: boolean; adminManager: AdminManager }> {
+  const adminManager = new AdminManager(supabaseClient)
 
   // Check if user is admin
-  const isAdmin = await adminManager.isAdmin(user.id)
-  if (!isAdmin) {
-    // Log attempted access
-    await adminManager.logAdminAction(
-      'unauthorized_admin_access_attempt',
-      'api',
-      request.url
-    )
-    
-    return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    })
-  }
+  const isAdmin = await adminManager.isAdmin(userId)
 
-  // Log admin access
-  await adminManager.logAdminAction(
-    'admin_api_access',
-    'api',
-    request.url
-  )
-
-  // Call the handler with admin context
-  return handler(request, { user, adminManager })
+  return { isAdmin, adminManager }
 }
 
 // Hook for client-side admin checks

@@ -3,7 +3,7 @@
 import { ClaudeModule, ExportRequest, ExportValidation } from './types'
 import { ZipBundler } from './zip-bundler'
 import { ExportStorage } from './storage'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export interface ExportVersion {
   version: string
@@ -150,7 +150,7 @@ export class ExportOrchestrator {
     size: number
     url: string
   }>> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data } = await supabase
       .from('export_versions')
@@ -225,7 +225,7 @@ export class ExportOrchestrator {
   }
 
   private async fetchSessionData(sessionId: string, userId: string): Promise<any> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data } = await supabase
       .from('sessions')
@@ -238,7 +238,7 @@ export class ExportOrchestrator {
   }
 
   private async fetchAnswers(sessionId: string): Promise<Record<number, any>> {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     const { data } = await supabase
       .from('answers')
@@ -563,7 +563,7 @@ Connect with other modules as specified in dependencies.
     size: number
   ): Promise<void> {
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseServerClient()
       
       await supabase
         .from('export_versions')

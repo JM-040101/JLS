@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe, PRICING, CHECKOUT_CONFIG, TAX_CONFIG } from '@/lib/stripe/config'
 import { subscriptionManager } from '@/lib/stripe/subscription'
 import { vatManager } from '@/lib/stripe/vat'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -106,7 +106,6 @@ export async function POST(request: NextRequest) {
       tax_id_collection: {
         enabled: TAX_CONFIG.collectTaxId
       },
-      customer_tax_exempt: taxInfo?.validated && taxInfo.country_code !== 'GB' ? 'reverse' : 'none',
       allow_promotion_codes: CHECKOUT_CONFIG.allowPromotionCodes,
       locale: CHECKOUT_CONFIG.locale,
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
 // Get checkout session status
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -198,7 +197,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function logCheckoutSession(userId: string, sessionId: string, priceId: string) {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   try {
     await supabase

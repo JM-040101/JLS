@@ -1,13 +1,13 @@
 // Save Workflow Answers API
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { AIClient } from '@/lib/ai/client'
 import { AI_MODELS, SYSTEM_INSTRUCTIONS } from '@/lib/ai/config'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -135,7 +135,7 @@ async function validateAnswers(
   }
 
   // Get phase template to check required fields
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   const { data: template } = await supabase
     .from('phase_templates')
     .select('questions')

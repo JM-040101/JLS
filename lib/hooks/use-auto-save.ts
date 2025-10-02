@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 interface UseAutoSaveOptions {
@@ -19,7 +19,7 @@ export function useAutoSave({
 }: UseAutoSaveOptions) {
   const timeoutRef = useRef<NodeJS.Timeout>()
   const lastSavedDataRef = useRef<string>()
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
 
   const save = useCallback(async () => {
     const dataString = JSON.stringify(data)

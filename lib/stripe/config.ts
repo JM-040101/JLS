@@ -95,7 +95,7 @@ export const TAX_CONFIG = {
 // Stripe Checkout configuration
 export const CHECKOUT_CONFIG = {
   mode: 'subscription' as const,
-  paymentMethodTypes: ['card'],
+  paymentMethodTypes: ['card'] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
   billingAddressCollection: 'required' as const,
   customerUpdate: {
     address: 'auto' as const,

@@ -1,7 +1,7 @@
 // Claude Sonnet 4 Plan Processing API
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase-server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { AIClient } from '@/lib/ai/client'
 import { AI_MODELS, SYSTEM_INSTRUCTIONS, TIMEOUT_CONFIG } from '@/lib/ai/config'
 import { 
@@ -13,7 +13,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -405,7 +405,7 @@ function getDefaultPrompts(modules: ModuleStructure[]): ClaudePrompt[] {
     title: `Set up ${module.name} module`,
     description: `Implement the ${module.name} functionality`,
     prompt: `Implement the ${module.name} module following the constraints: ${module.constraints.join(', ')}`,
-    mcpServers: module.mcpServers,
+    mcpServers: module.mcpServers || [],
     expectedOutput: `Complete ${module.name} implementation with all required features`,
     dependencies: index > 0 ? [`setup-${modules[index - 1].name}`] : []
   }))

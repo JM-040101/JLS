@@ -2,7 +2,7 @@
 
 import { RateLimitStatus } from './types'
 import { RATE_LIMITS } from './config'
-import { createSupabaseClient } from '../supabase-server'
+import { createSupabaseServerClient } from '../supabase-server'
 import { redis } from '../redis' // Optional Redis for faster rate limiting
 
 interface RateLimitEntry {
@@ -29,7 +29,7 @@ export async function checkRateLimit(userId: string): Promise<RateLimitStatus> {
 }
 
 async function getUserTier(userId: string): Promise<'free' | 'pro' | 'enterprise'> {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   const { data } = await supabase
     .from('subscriptions')
@@ -46,7 +46,7 @@ async function checkDatabaseRateLimit(
   now: number,
   tier: 'free' | 'pro' | 'enterprise'
 ): Promise<RateLimitStatus> {
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
   
   // Check minute window
   const minuteAgo = new Date(now - 60000)
