@@ -71,7 +71,7 @@ export async function GET(
     zip.file('COMPLETE-PLAN.md', completePlan)
 
     // Generate the ZIP
-    const zipBlob = await zip.generateAsync({ type: 'nodebuffer' })
+    const zipBlob = await zip.generateAsync({ type: 'uint8array' })
 
     // Return the ZIP file
     const filename = `${slugify(session.app_description || 'blueprint')}-${new Date().toISOString().split('T')[0]}.zip`
