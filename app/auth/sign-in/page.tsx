@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react'
 import GoogleAuthButton from '@/components/auth/google-auth-button'
 
-export default function SignInPage() {
+function SignInForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/dashboard'
@@ -155,5 +155,17 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blueprint-navy-50 to-blueprint-cyan-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blueprint-cyan-600"></div>
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   )
 }
