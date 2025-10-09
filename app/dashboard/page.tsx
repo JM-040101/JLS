@@ -13,6 +13,10 @@ export default async function DashboardPage() {
   const inProgressSessions = sessions.filter(s => s.status === 'in_progress')
   const completedSessions = sessions.filter(s => s.status === 'completed')
 
+  // Check if user is admin (admins get full access without subscription)
+  const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'superadmin'
+  const hasProAccess = user.subscription_status === 'active' || isAdmin
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white">
       {/* Header */}
@@ -91,14 +95,21 @@ export default async function DashboardPage() {
         </div>
 
         {/* Action Button */}
-        {user.subscription_status === 'active' ? (
-          <Link
-            href="/workflow/new"
-            className="inline-flex items-center btn-primary text-lg px-6 py-3 mb-8"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create New Blueprint
-          </Link>
+        {hasProAccess ? (
+          <div className="mb-8">
+            <Link
+              href="/workflow/new"
+              className="inline-flex items-center btn-primary text-lg px-6 py-3"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create New Blueprint
+            </Link>
+            {isAdmin && user.subscription_status !== 'active' && (
+              <p className="text-sm text-blueprint-navy-600 mt-2">
+                ✨ Admin access - unlimited blueprints
+              </p>
+            )}
+          </div>
         ) : (
           <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-yellow-800 mb-2">
@@ -123,7 +134,7 @@ export default async function DashboardPage() {
               <p className="text-blueprint-navy-600 mb-4">
                 Start your first SaaS blueprint and transform your idea into reality
               </p>
-              {user.subscription_status === 'active' && (
+              {hasProAccess && (
                 <Link href="/workflow/new" className="btn-primary">
                   Create Your First Blueprint
                 </Link>

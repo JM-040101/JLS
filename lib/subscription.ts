@@ -15,10 +15,10 @@ export interface SubscriptionCheck {
  */
 export async function checkSubscriptionAccess(userId: string): Promise<SubscriptionCheck> {
   const supabase = createSupabaseServerClient()
-  
+
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('subscription_status, subscription_id, updated_at')
+    .select('subscription_status, subscription_id, updated_at, role, is_admin')
     .eq('id', userId)
     .single()
 
@@ -27,6 +27,14 @@ export async function checkSubscriptionAccess(userId: string): Promise<Subscript
       hasAccess: false,
       status: 'inactive',
       message: 'No subscription found'
+    }
+  }
+
+  // Admin users have unlimited access to all features
+  if (profile.is_admin === true || profile.role === 'admin' || profile.role === 'superadmin') {
+    return {
+      hasAccess: true,
+      status: 'active'
     }
   }
 
@@ -69,12 +77,12 @@ export async function checkSubscriptionAccess(userId: string): Promise<Subscript
 /**
  * Validate user can create new workflow sessions
  */
-export async function canCreateSession(userId: string): Promise<{ 
+export async function canCreateSession(userId: string): Promise<{
   allowed: boolean
-  reason?: string 
+  reason?: string
 }> {
   const subscriptionCheck = await checkSubscriptionAccess(userId)
-  
+
   if (!subscriptionCheck.hasAccess) {
     return {
       allowed: false,
@@ -82,8 +90,22 @@ export async function canCreateSession(userId: string): Promise<{
     }
   }
 
-  // Check session limits (optional - you can add logic for session limits per plan)
+  // Check if user is admin - admins have unlimited sessions
   const supabase = createSupabaseServerClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_admin')
+    .eq('id', userId)
+    .single()
+
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin' || profile?.role === 'superadmin'
+
+  // Admins bypass session limits
+  if (isAdmin) {
+    return { allowed: true }
+  }
+
+  // Check session limits for non-admin users
   const { count } = await supabase
     .from('sessions')
     .select('*', { count: 'exact', head: true })
