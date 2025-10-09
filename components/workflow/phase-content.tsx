@@ -81,7 +81,19 @@ export default function PhaseContent({
       <div className="p-6 space-y-6">
         {questions.map((question, index) => {
           const answer = answers[`${phaseTemplate.phase_number}-${question.id}`]
-          
+
+          // Map question format to QuestionForm format
+          const formQuestion = {
+            id: question.id,
+            type: question.type,
+            label: question.text, // Map 'text' to 'label'
+            tooltip: question.help_text, // Map 'help_text' to 'tooltip'
+            required: question.required,
+            options: question.options,
+            placeholder: question.placeholder,
+            validation: question.validation
+          }
+
           return (
             <motion.div
               key={question.id}
@@ -90,13 +102,13 @@ export default function PhaseContent({
               transition={{ delay: index * 0.1 }}
             >
               <QuestionForm
-                question={question}
+                question={formQuestion}
                 value={answer?.answer_text || ''}
-                onChange={(value) => 
+                onChange={(value) =>
                   onAnswerChange(
                     phaseTemplate.phase_number,
                     question.id,
-                    question.label,
+                    question.text, // Use 'text' instead of 'label'
                     value,
                     question.type
                   )
