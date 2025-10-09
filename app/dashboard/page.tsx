@@ -1,9 +1,10 @@
 import { requireAuth } from '@/lib/auth'
 import { getUserSessions } from '@/lib/auth'
-import { getSubscriptionDetails } from '@/lib/subscription'
+import { getSubscriptionDetails, checkSubscriptionAccess } from '@/lib/subscription'
 import Link from 'next/link'
 import { Plus, FileText, Clock, CheckCircle, Archive, TrendingUp } from 'lucide-react'
 import UserMenu from '@/components/auth/user-menu'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export default async function DashboardPage() {
   const user = await requireAuth()
@@ -13,9 +14,19 @@ export default async function DashboardPage() {
   const inProgressSessions = sessions.filter(s => s.status === 'in_progress')
   const completedSessions = sessions.filter(s => s.status === 'completed')
 
-  // Check if user is admin (admins get full access without subscription)
-  const isAdmin = user.is_admin === true || user.role === 'admin' || user.role === 'superadmin'
-  const hasProAccess = user.subscription_status === 'active' || isAdmin
+  // Check if user has Pro access (subscription or admin)
+  const subscriptionCheck = await checkSubscriptionAccess(user.id)
+  const hasProAccess = subscriptionCheck.hasAccess
+
+  // Check if user is admin to show special message
+  const supabase = createSupabaseServerClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_admin, subscription_status')
+    .eq('id', user.id)
+    .single()
+
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin' || profile?.role === 'superadmin'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white">
@@ -104,7 +115,7 @@ export default async function DashboardPage() {
               <Plus className="w-5 h-5 mr-2" />
               Create New Blueprint
             </Link>
-            {isAdmin && user.subscription_status !== 'active' && (
+            {isAdmin && profile?.subscription_status !== 'active' && (
               <p className="text-sm text-blueprint-navy-600 mt-2">
                 ✨ Admin access - unlimited blueprints
               </p>
