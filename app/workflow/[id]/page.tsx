@@ -19,10 +19,8 @@ export default async function WorkflowPage({ params }: { params: { id: string } 
     notFound()
   }
 
-  // Check if session is completed
-  if (session.status === 'completed') {
-    redirect(`/export/${session.id}`)
-  }
+  // Allow viewing completed sessions in read-only mode
+  // The WorkflowContainer component handles isViewOnly state
 
   // Fetch phase templates
   const { data: phaseTemplates } = await supabase
