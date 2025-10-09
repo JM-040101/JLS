@@ -86,11 +86,15 @@ export async function requireAuth() {
  */
 export async function requireSubscription() {
   const user = await requireAuth()
-  
-  if (user.subscription_status !== 'active') {
+
+  // Use checkSubscriptionAccess which handles admin bypass
+  const { checkSubscriptionAccess } = await import('@/lib/subscription')
+  const subscriptionCheck = await checkSubscriptionAccess(user.id)
+
+  if (!subscriptionCheck.hasAccess) {
     redirect('/pricing')
   }
-  
+
   return user
 }
 
