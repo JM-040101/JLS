@@ -38,15 +38,18 @@ export async function middleware(req: NextRequest) {
 
   // Check subscription for workflow routes
   if (currentPath.startsWith('/workflow') && session) {
-    // Fetch user profile to check subscription
+    // Fetch user profile to check subscription and admin status
     const { data: profile } = await supabase
       .from('profiles')
-      .select('subscription_status')
+      .select('subscription_status, role, is_admin')
       .eq('id', session.user.id)
       .single()
 
-    // Redirect to pricing if no active subscription
-    if (!profile || profile.subscription_status !== 'active') {
+    // Check if user is admin - admins bypass subscription requirement
+    const isAdmin = profile?.is_admin === true || profile?.role === 'admin' || profile?.role === 'superadmin'
+
+    // Redirect to pricing if no active subscription AND not an admin
+    if (!isAdmin && (!profile || profile.subscription_status !== 'active')) {
       return NextResponse.redirect(new URL('/pricing', req.url))
     }
   }
