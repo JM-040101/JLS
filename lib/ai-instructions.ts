@@ -122,9 +122,9 @@ export function validateAIInstructions(): {
     const filePath = path.join(AI_WORKFLOW_DIR, file)
     try {
       const content = fs.readFileSync(filePath, 'utf-8')
-      // Check if file has actual content (not just template)
-      if (content.length < 100 || content.includes('PASTE YOUR')) {
-        missing.push(file + ' (empty or contains template placeholder)')
+      // Check if file has substantial content (>500 chars indicates real content beyond template)
+      if (content.length < 500) {
+        missing.push(file + ' (file too short - needs actual content)')
       }
     } catch (error) {
       missing.push(file + ' (file not found)')
