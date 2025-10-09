@@ -34,9 +34,24 @@ export default function WorkflowContainer({
   )
   const [isSaving, setIsSaving] = useState(false)
   const [sessionStatus, setSessionStatus] = useState(session.status)
-  
+
   const router = useRouter()
   const supabase = createClientComponentClient()
+
+  // Listen for custom phase change events from child components
+  useEffect(() => {
+    const handlePhaseChange = (event: CustomEvent) => {
+      const targetPhase = event.detail
+      if (targetPhase >= 1 && targetPhase <= 12) {
+        setCurrentPhase(targetPhase)
+      }
+    }
+
+    window.addEventListener('changePhase', handlePhaseChange as EventListener)
+    return () => {
+      window.removeEventListener('changePhase', handlePhaseChange as EventListener)
+    }
+  }, [])
 
   // Auto-save answers with debounce
   useEffect(() => {
@@ -178,7 +193,8 @@ export default function WorkflowContainer({
   }
 
   const handlePhaseSelect = (phase: number) => {
-    // Only allow navigation to completed phases or the next phase
+    // Allow navigation to any completed phase or the next uncompleted phase
+    // This enables viewing and editing previous phases
     if (phase <= completedPhases + 1) {
       setCurrentPhase(phase)
     } else {

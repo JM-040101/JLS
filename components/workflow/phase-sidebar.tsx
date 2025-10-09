@@ -40,9 +40,9 @@ export default function PhaseSidebar({
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer'
+        return 'bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer hover:shadow-md'
       case 'current':
-        return 'bg-blueprint-cyan-50 border-blueprint-cyan-300 ring-2 ring-blueprint-cyan-200'
+        return 'bg-blueprint-cyan-50 border-blueprint-cyan-300 ring-2 ring-blueprint-cyan-200 cursor-pointer'
       case 'available':
         return 'bg-white border-blueprint-navy-200 hover:bg-blueprint-navy-50 cursor-pointer'
       default:

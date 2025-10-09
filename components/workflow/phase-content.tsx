@@ -123,16 +123,34 @@ export default function PhaseContent({
       {/* Phase Actions */}
       <div className="border-t border-blueprint-navy-100 p-6">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-blueprint-navy-600">
-            {allRequiredAnswered ? (
-              <span className="text-green-600 font-medium">
-                ✓ All required questions answered
-              </span>
-            ) : (
-              <span>
-                Answer all required questions to proceed
-              </span>
+          <div className="flex items-center gap-4">
+            {phaseTemplate.phase_number > 1 && (
+              <button
+                onClick={() => {
+                  const prevPhase = phaseTemplate.phase_number - 1
+                  // Trigger phase change through parent component
+                  if (typeof window !== 'undefined') {
+                    const event = new CustomEvent('changePhase', { detail: prevPhase })
+                    window.dispatchEvent(event)
+                  }
+                }}
+                className="btn-ghost flex items-center text-blueprint-navy-600 hover:text-blueprint-navy-900"
+              >
+                <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                Previous Phase
+              </button>
             )}
+            <div className="text-sm text-blueprint-navy-600">
+              {allRequiredAnswered ? (
+                <span className="text-green-600 font-medium">
+                  ✓ All required questions answered
+                </span>
+              ) : (
+                <span>
+                  Answer all required questions to proceed
+                </span>
+              )}
+            </div>
           </div>
 
           <button
