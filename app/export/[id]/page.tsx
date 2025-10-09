@@ -2,8 +2,9 @@ import { requireAuth } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Download, FileText, Package } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Package, Eye } from 'lucide-react'
 import UserMenu from '@/components/auth/user-menu'
+import CompletedPlanView from '@/components/export/completed-plan-view'
 
 interface ExportPageProps {
   params: {
@@ -29,6 +30,26 @@ export default async function ExportPage({ params }: ExportPageProps) {
 
   // Check if session is completed
   const isCompleted = session.status === 'completed'
+
+  // Fetch phase templates and answers for completed plans
+  let phaseTemplates = []
+  let answers = []
+
+  if (isCompleted) {
+    const { data: templates } = await supabase
+      .from('phase_templates')
+      .select('*')
+      .order('phase_number', { ascending: true })
+
+    const { data: sessionAnswers } = await supabase
+      .from('answers')
+      .select('*')
+      .eq('session_id', session.id)
+      .order('phase_number', { ascending: true })
+
+    phaseTemplates = templates || []
+    answers = sessionAnswers || []
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white">
@@ -140,26 +161,37 @@ export default async function ExportPage({ params }: ExportPageProps) {
                 </li>
               </ul>
 
-              <button
+              <a
+                href={`/api/export/${params.id}`}
                 className="btn-primary inline-flex items-center"
-                disabled
+                download
               >
                 <Download className="w-5 h-5 mr-2" />
                 Download Blueprint Package
-              </button>
+              </a>
               <p className="text-xs text-blueprint-navy-500 mt-2">
-                Export functionality coming soon
+                Download includes README, CLAUDE.md, and all phase documentation
               </p>
             </div>
 
-            {/* View Answers Section */}
+            {/* Completed Plan View */}
+            <CompletedPlanView
+              phaseTemplates={phaseTemplates}
+              answers={answers}
+              sessionName={session.app_description || 'Untitled Blueprint'}
+            />
+
+            {/* View/Edit Answers Section */}
             <div className="bg-white rounded-lg border border-blueprint-navy-200 p-6">
-              <h2 className="text-xl font-semibold text-blueprint-navy-900 mb-4">
-                Review Your Answers
-              </h2>
+              <div className="flex items-center space-x-3 mb-4">
+                <Eye className="w-5 h-5 text-blueprint-navy-600" />
+                <h2 className="text-xl font-semibold text-blueprint-navy-900">
+                  Interactive View
+                </h2>
+              </div>
 
               <p className="text-blueprint-navy-600 mb-4">
-                Want to review or edit your blueprint answers? You can view all completed phases.
+                Want to navigate through your blueprint in the full workflow interface? View all phases with the original questions and your answers.
               </p>
 
               <Link
@@ -167,7 +199,7 @@ export default async function ExportPage({ params }: ExportPageProps) {
                 className="btn-secondary inline-flex items-center"
               >
                 <FileText className="w-5 h-5 mr-2" />
-                View All Questions & Answers
+                View in Workflow Interface
               </Link>
             </div>
           </div>
