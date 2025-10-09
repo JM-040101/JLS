@@ -70,13 +70,14 @@ export async function GET(
     const completePlan = generateCompletePlan(session, phaseTemplates, answers)
     zip.file('COMPLETE-PLAN.md', completePlan)
 
-    // Generate the ZIP
-    const zipBlob = await zip.generateAsync({ type: 'uint8array' })
+    // Generate the ZIP as base64, then convert to buffer
+    const zipBlob = await zip.generateAsync({ type: 'base64' })
+    const buffer = Buffer.from(zipBlob, 'base64')
 
     // Return the ZIP file
     const filename = `${slugify(session.app_description || 'blueprint')}-${new Date().toISOString().split('T')[0]}.zip`
 
-    return new NextResponse(zipBlob, {
+    return new Response(buffer, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${filename}"`,
