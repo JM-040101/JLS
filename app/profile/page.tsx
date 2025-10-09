@@ -81,11 +81,11 @@ export default async function ProfilePage() {
               <div>
                 <p className="text-sm font-medium text-blueprint-navy-600">Member Since</p>
                 <p className="text-blueprint-navy-900">
-                  {new Date(profile?.created_at || user.created_at).toLocaleDateString('en-US', {
+                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric'
-                  })}
+                  }) : 'N/A'}
                 </p>
               </div>
             </div>
