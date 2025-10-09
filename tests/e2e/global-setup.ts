@@ -29,11 +29,12 @@ async function globalSetup() {
   // Clean up existing test data
   console.log('🧹 Cleaning up existing test data...')
   try {
+    // TODO: Fix getUserByEmail - method doesn't exist in current Supabase API
     // Delete test user if exists
-    const { data: existingUser } = await supabase.auth.admin?.getUserByEmail(TEST_USER_EMAIL)
-    if (existingUser?.user) {
-      await supabase.auth.admin?.deleteUser(existingUser.user.id)
-    }
+    // const { data: existingUser } = await supabase.auth.admin?.getUserByEmail(TEST_USER_EMAIL)
+    // if (existingUser?.user) {
+    //   await supabase.auth.admin?.deleteUser(existingUser.user.id)
+    // }
 
     // Clean up test sessions
     await supabase
@@ -127,7 +128,7 @@ function generateMockGPTResponses() {
     'Success Metrics',
   ]
 
-  return phases.reduce((acc, phase, index) => {
+  return phases.reduce((acc: any, phase, index) => {
     acc[`phase_${index + 1}`] = {
       question: `What is your approach for ${phase}?`,
       followUp: `Can you elaborate on your ${phase.toLowerCase()}?`,

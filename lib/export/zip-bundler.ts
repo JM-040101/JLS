@@ -380,7 +380,7 @@ function extractFeatures(modules: ClaudeModule[]): string[] {
   modules.forEach(module => {
     features.push(...module.features)
   })
-  return [...new Set(features)] // Remove duplicates
+  return Array.from(new Set(features)) // Remove duplicates
 }
 
 function extractConstraints(modules: ClaudeModule[]): string[] {
@@ -388,7 +388,7 @@ function extractConstraints(modules: ClaudeModule[]): string[] {
   modules.forEach(module => {
     constraints.push(...module.constraints)
   })
-  return [...new Set(constraints)]
+  return Array.from(new Set(constraints))
 }
 
 function extractMcpServers(modules: ClaudeModule[]): string[] {
@@ -396,7 +396,7 @@ function extractMcpServers(modules: ClaudeModule[]): string[] {
   modules.forEach(module => {
     servers.push(...module.mcpServers)
   })
-  return [...new Set(servers)]
+  return Array.from(new Set(servers))
 }
 
 // Template generation functions

@@ -144,7 +144,7 @@ export class AdminManager {
       if (error || !data) return {}
       
       const overrides: Record<string, any> = {}
-      data.forEach(row => {
+      data.forEach((row: any) => {
         overrides[row.override_type] = row.override_value
       })
       

@@ -188,9 +188,9 @@ function checkInMemoryRateLimit(
 // Clean up old entries periodically
 setInterval(() => {
   const now = Date.now()
-  for (const [key, entry] of inMemoryStore.entries()) {
+  Array.from(inMemoryStore.entries()).forEach(([key, entry]) => {
     if (now - entry.windowStart > 86400000) { // Remove entries older than 24 hours
       inMemoryStore.delete(key)
     }
-  }
+  })
 }, 3600000) // Run every hour

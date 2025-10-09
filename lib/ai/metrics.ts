@@ -99,7 +99,7 @@ export async function getSessionMetrics(sessionId: string): Promise<{
     }
   }
 
-  const phases = [...new Set(data.map(m => m.phase_number).filter(Boolean))]
+  const phases = Array.from(new Set(data.map(m => m.phase_number).filter(Boolean)))
   const totalCost = data.reduce((sum, m) => sum + (m.cost || 0), 0)
   const firstTimestamp = new Date(data[0].created_at).getTime()
   const lastTimestamp = new Date(data[data.length - 1].created_at).getTime()

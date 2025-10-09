@@ -103,7 +103,7 @@ export class SubscriptionManager {
     }
 
     // Check for active statuses
-    if ([SUBSCRIPTION_STATUS.ACTIVE, SUBSCRIPTION_STATUS.TRIALING].includes(subscription.status)) {
+    if ([SUBSCRIPTION_STATUS.ACTIVE, SUBSCRIPTION_STATUS.TRIALING].includes(subscription.status as any)) {
       return true
     }
 
@@ -286,7 +286,7 @@ export class SubscriptionManager {
       .gte('created_at', startOfMonth.toISOString())
 
     // Calculate storage
-    const storageUsedMB = exports?.reduce((sum, e) => sum + (e.size || 0), 0) / (1024 * 1024) || 0
+    const storageUsedMB = (exports?.reduce((sum, e) => sum + (e.size || 0), 0) || 0) / (1024 * 1024)
 
     return {
       sessionsThisMonth: sessions?.length || 0,
