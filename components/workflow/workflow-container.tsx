@@ -195,7 +195,8 @@ export default function WorkflowContainer({
   const handlePhaseSelect = (phase: number) => {
     // Allow navigation to any completed phase or the next uncompleted phase
     // This enables viewing and editing previous phases
-    if (phase <= completedPhases + 1) {
+    // For completed blueprints, allow viewing all phases
+    if (sessionStatus === 'completed' || phase <= completedPhases + 1) {
       setCurrentPhase(phase)
     } else {
       toast.error('Complete previous phases first')
@@ -227,6 +228,7 @@ export default function WorkflowContainer({
               currentPhase={currentPhase}
               completedPhases={completedPhases}
               onPhaseSelect={handlePhaseSelect}
+              isCompleted={sessionStatus === 'completed'}
             />
           </div>
 
@@ -247,6 +249,7 @@ export default function WorkflowContainer({
                   onPhaseComplete={handlePhaseComplete}
                   canProceed={currentPhase <= completedPhases + 1}
                   isLastPhase={currentPhase === 12}
+                  isViewOnly={sessionStatus === 'completed'}
                 />
               </motion.div>
             </AnimatePresence>

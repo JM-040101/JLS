@@ -152,18 +152,23 @@ export default async function ExportPage({ params }: ExportPageProps) {
               </p>
             </div>
 
-            {/* Preview Section */}
+            {/* View Answers Section */}
             <div className="bg-white rounded-lg border border-blueprint-navy-200 p-6">
               <h2 className="text-xl font-semibold text-blueprint-navy-900 mb-4">
-                Preview
+                Review Your Answers
               </h2>
 
-              <div className="bg-blueprint-navy-50 rounded-lg p-4 font-mono text-sm">
-                <p className="text-blueprint-navy-600 mb-2"># {session.app_description}</p>
-                <p className="text-blueprint-navy-600 mb-2">Generated SaaS Blueprint</p>
-                <p className="text-blueprint-navy-500 mb-4">...</p>
-                <p className="text-blueprint-navy-500">Full documentation will be available in the ZIP export.</p>
-              </div>
+              <p className="text-blueprint-navy-600 mb-4">
+                Want to review or edit your blueprint answers? You can view all completed phases.
+              </p>
+
+              <Link
+                href={`/workflow/${params.id}`}
+                className="btn-secondary inline-flex items-center"
+              >
+                <FileText className="w-5 h-5 mr-2" />
+                View All Questions & Answers
+              </Link>
             </div>
           </div>
         )}

@@ -19,6 +19,7 @@ interface PhaseContentProps {
   onPhaseComplete: () => void
   canProceed: boolean
   isLastPhase: boolean
+  isViewOnly?: boolean
 }
 
 export default function PhaseContent({
@@ -28,6 +29,7 @@ export default function PhaseContent({
   onPhaseComplete,
   canProceed,
   isLastPhase,
+  isViewOnly = false,
 }: PhaseContentProps) {
   const [showHelp, setShowHelp] = useState(false)
   const questions = phaseTemplate.questions as any[]
@@ -113,7 +115,7 @@ export default function PhaseContent({
                     question.type
                   )
                 }
-                disabled={!canProceed}
+                disabled={!canProceed || isViewOnly}
               />
             </motion.div>
           )
@@ -141,7 +143,11 @@ export default function PhaseContent({
               </button>
             )}
             <div className="text-sm text-blueprint-navy-600">
-              {allRequiredAnswered ? (
+              {isViewOnly ? (
+                <span className="text-blue-600 font-medium">
+                  📖 Viewing completed blueprint
+                </span>
+              ) : allRequiredAnswered ? (
                 <span className="text-green-600 font-medium">
                   ✓ All required questions answered
                 </span>
@@ -153,26 +159,44 @@ export default function PhaseContent({
             </div>
           </div>
 
-          <button
-            onClick={onPhaseComplete}
-            disabled={!allRequiredAnswered || !canProceed}
-            className={`
-              btn-primary flex items-center
-              ${!allRequiredAnswered || !canProceed ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          >
-            {isLastPhase ? (
-              <>
-                <Trophy className="w-4 h-4 mr-2" />
-                Complete Blueprint
-              </>
-            ) : (
-              <>
-                Next Phase
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </button>
+          {!isViewOnly && (
+            <button
+              onClick={onPhaseComplete}
+              disabled={!allRequiredAnswered || !canProceed}
+              className={`
+                btn-primary flex items-center
+                ${!allRequiredAnswered || !canProceed ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              {isLastPhase ? (
+                <>
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Complete Blueprint
+                </>
+              ) : (
+                <>
+                  Next Phase
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </button>
+          )}
+
+          {isViewOnly && phaseTemplate.phase_number < 12 && (
+            <button
+              onClick={() => {
+                const nextPhase = phaseTemplate.phase_number + 1
+                if (typeof window !== 'undefined') {
+                  const event = new CustomEvent('changePhase', { detail: nextPhase })
+                  window.dispatchEvent(event)
+                }
+              }}
+              className="btn-secondary flex items-center"
+            >
+              Next Phase
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </button>
+          )}
         </div>
       </div>
     </div>

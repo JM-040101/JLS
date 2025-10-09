@@ -9,6 +9,7 @@ interface PhaseSidebarProps {
   currentPhase: number
   completedPhases: number
   onPhaseSelect: (phase: number) => void
+  isCompleted?: boolean
 }
 
 export default function PhaseSidebar({
@@ -16,8 +17,15 @@ export default function PhaseSidebar({
   currentPhase,
   completedPhases,
   onPhaseSelect,
+  isCompleted = false,
 }: PhaseSidebarProps) {
   const getPhaseStatus = (phaseNumber: number) => {
+    // If blueprint is completed, all phases are viewable
+    if (isCompleted) {
+      if (phaseNumber === currentPhase) return 'current'
+      return 'completed'
+    }
+
     if (phaseNumber <= completedPhases) return 'completed'
     if (phaseNumber === currentPhase) return 'current'
     if (phaseNumber === completedPhases + 1) return 'available'
