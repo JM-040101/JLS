@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildSystemPrompt, validateAIInstructions } from '@/lib/ai-instructions'
 import { requireAuth } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import OpenAI from 'openai'
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 /**
  * POST /api/ai/chat
@@ -84,27 +90,78 @@ Current Phase: ${session.current_phase}
 Remember this context as you guide the user through Phase ${phase}.
 `
 
-    // TODO: Integrate with GPT-5 or Claude Sonnet 4
-    // This is a placeholder response
-    // You'll need to implement the actual AI API call here using:
-    // - OpenAI API for GPT-5
-    // - Anthropic API for Claude Sonnet 4
+    // Build messages array for OpenAI
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content: systemPrompt + '\n\n' + contextPrompt
+      },
+      // Add conversation history
+      ...conversationHistory.map((msg: { role: string; content: string }) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      })),
+      // Add current user message
+      {
+        role: 'user',
+        content: message
+      }
+    ]
 
-    const aiResponse = `[AI Response Placeholder]
+    // Call GPT-5 (fallback to gpt-4-turbo if GPT-5 not available)
+    let completion
+    try {
+      completion = await openai.chat.completions.create({
+        model: 'gpt-5',
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000,
+        presence_penalty: 0.1,
+        frequency_penalty: 0.1
+      })
+    } catch (error: any) {
+      // If GPT-5 is not available, fallback to gpt-4-turbo
+      if (error?.status === 404 || error?.message?.includes('gpt-5')) {
+        console.log('GPT-5 not available, falling back to gpt-4-turbo')
+        completion = await openai.chat.completions.create({
+          model: 'gpt-4-turbo',
+          messages,
+          temperature: 0.7,
+          max_tokens: 2000,
+          presence_penalty: 0.1,
+          frequency_penalty: 0.1
+        })
+      } else {
+        throw error
+      }
+    }
 
-This endpoint is ready to receive your AI model integration.
+    const aiResponse = completion.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response. Please try again.'
 
-System Prompt Length: ${systemPrompt.length} characters
-Context: ${session.app_name || 'Unnamed Project'}
-User Message: ${message}
+    // Save the conversation to database
+    const { error: saveError } = await supabase
+      .from('answers')
+      .upsert({
+        session_id: sessionId,
+        phase_number: phase,
+        question: message,
+        answer: aiResponse,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'session_id,phase_number'
+      })
 
-To complete the integration, add your API key and implement the AI call in this endpoint.`
+    if (saveError) {
+      console.error('Failed to save conversation:', saveError)
+    }
 
     // Return AI response
     return NextResponse.json({
       response: aiResponse,
       phase,
       sessionId,
+      model: completion.model,
+      usage: completion.usage,
       instructions: {
         loaded: true,
         promptLength: systemPrompt.length

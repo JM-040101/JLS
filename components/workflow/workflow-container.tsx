@@ -7,6 +7,7 @@ import PhaseProgress from './phase-progress'
 import PhaseSidebar from './phase-sidebar'
 import PhaseContent from './phase-content'
 import WorkflowHeader from './workflow-header'
+import { AIChat } from '@/components/ai-chat'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
@@ -223,14 +224,12 @@ export default function WorkflowContainer({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
+                className="h-[calc(100vh-250px)]"
               >
-                <PhaseContent
-                  phaseTemplate={phaseTemplates.find(p => p.phase_number === currentPhase)!}
-                  answers={answers}
-                  onAnswerChange={handleAnswerChange}
+                <AIChat
+                  sessionId={session.id}
+                  phase={currentPhase}
                   onPhaseComplete={handlePhaseComplete}
-                  canProceed={currentPhase <= completedPhases + 1}
-                  isLastPhase={currentPhase === 12}
                 />
               </motion.div>
             </AnimatePresence>
