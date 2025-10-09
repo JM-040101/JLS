@@ -4,17 +4,12 @@ import NewWorkflowForm from '@/components/workflow/new-workflow-form'
 
 export default async function NewWorkflowPage() {
   const user = await requireSubscription()
-  
-  // Check if user has reached session limit
-  const { createSupabaseServerClient } = await import('@/lib/supabase-server')
-  const supabase = createSupabaseServerClient()
-  const { count } = await supabase
-    .from('sessions')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('status', 'in_progress')
 
-  if (count && count >= 3) {
+  // Check if user can create a new session (handles admin bypass)
+  const { canCreateSession } = await import('@/lib/subscription')
+  const sessionCheck = await canCreateSession(user.id)
+
+  if (!sessionCheck.allowed) {
     redirect('/dashboard?error=session_limit')
   }
 
