@@ -100,7 +100,10 @@ export default function AdminPanel() {
                 Back to Dashboard
               </button>
               <button
-                onClick={() => supabase.auth.signOut()}
+                onClick={async () => {
+                  await supabase.auth.signOut()
+                  window.location.href = '/'
+                }}
                 className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 Sign Out

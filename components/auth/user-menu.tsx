@@ -24,9 +24,14 @@ export default function UserMenu() {
   }, [])
 
   const handleSignOut = async () => {
-    await fetch('/auth/sign-out', { method: 'POST' })
-    router.push('/')
-    router.refresh()
+    try {
+      await fetch('/auth/sign-out', { method: 'POST' })
+      // Force immediate redirect
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Sign out error:', error)
+      window.location.href = '/'
+    }
   }
 
   if (!user) return null
