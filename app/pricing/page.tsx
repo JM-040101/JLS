@@ -124,14 +124,14 @@ export default function PricingPage() {
               </li>
             </ul>
 
-            <button
-              className="w-full px-6 py-3 bg-white text-blueprint-navy-900 font-medium rounded-lg hover:bg-gray-100 transition-colors"
-              disabled
+            <Link
+              href="/workflow/new"
+              className="block w-full px-6 py-3 bg-white text-blueprint-navy-900 font-medium rounded-lg hover:bg-gray-100 transition-colors text-center"
             >
               Start Your Blueprint Journey
-            </button>
+            </Link>
             <p className="text-xs text-center mt-2 opacity-75">
-              Stripe checkout integration coming soon
+              Sign up to create your first blueprint
             </p>
           </div>
         </div>
