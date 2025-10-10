@@ -45,19 +45,19 @@ export default function PhaseContent({
   return (
     <div className="bg-white rounded-lg shadow-md">
       {/* Phase Header */}
-      <div className="border-b border-blueprint-navy-100 p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-blueprint-navy-900 mb-2">
+      <div className="border-b border-blueprint-navy-100 px-6 py-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-blueprint-navy-900 mb-3">
               Phase {phaseTemplate.phase_number}: {phaseTemplate.title}
             </h2>
-            <p className="text-blueprint-navy-600">
+            <p className="text-blueprint-navy-600 text-base leading-relaxed">
               {phaseTemplate.description}
             </p>
           </div>
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="btn-ghost p-2"
+            className="btn-ghost p-2 flex-shrink-0"
             title="Show help"
           >
             <HelpCircle className="w-5 h-5 text-blueprint-cyan-600" />
@@ -70,17 +70,17 @@ export default function PhaseContent({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 p-4 bg-blueprint-cyan-50 rounded-lg border border-blueprint-cyan-200"
+            className="mt-6 p-5 bg-blueprint-cyan-50 rounded-lg border border-blueprint-cyan-200"
           >
-            <p className="text-sm text-blueprint-navy-700">
-              <strong>💡 Tip:</strong> {phaseTemplate.help_text}
+            <p className="text-sm text-blueprint-navy-700 leading-relaxed">
+              <strong className="font-semibold">💡 Tip:</strong> {phaseTemplate.help_text}
             </p>
           </motion.div>
         )}
       </div>
 
       {/* Questions */}
-      <div className="p-6 space-y-6">
+      <div className="px-6 py-8 space-y-8">
         {questions.map((question, index) => {
           const answer = answers[`${phaseTemplate.phase_number}-${question.id}`]
 
@@ -123,9 +123,9 @@ export default function PhaseContent({
       </div>
 
       {/* Phase Actions */}
-      <div className="border-t border-blueprint-navy-100 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="border-t border-blueprint-navy-100 px-6 py-6 bg-blueprint-navy-50">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
             {phaseTemplate.phase_number > 1 && (
               <button
                 onClick={() => {
@@ -136,23 +136,23 @@ export default function PhaseContent({
                     window.dispatchEvent(event)
                   }
                 }}
-                className="btn-ghost flex items-center text-blueprint-navy-600 hover:text-blueprint-navy-900"
+                className="btn-ghost flex items-center text-blueprint-navy-600 hover:text-blueprint-navy-900 transition-colors"
               >
                 <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
                 Previous Phase
               </button>
             )}
-            <div className="text-sm text-blueprint-navy-600">
+            <div className="text-sm">
               {isViewOnly ? (
-                <span className="text-blue-600 font-medium">
+                <span className="text-blue-600 font-medium flex items-center gap-2">
                   📖 Viewing completed blueprint
                 </span>
               ) : allRequiredAnswered ? (
-                <span className="text-green-600 font-medium">
+                <span className="text-green-600 font-medium flex items-center gap-2">
                   ✓ All required questions answered
                 </span>
               ) : (
-                <span>
+                <span className="text-blueprint-navy-600">
                   Answer all required questions to proceed
                 </span>
               )}

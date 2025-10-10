@@ -177,22 +177,22 @@ export default function QuestionForm({ question, value, onChange, disabled }: Qu
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-start justify-between">
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-2">
         <label
           htmlFor={question.id}
-          className="block text-sm font-medium text-blueprint-navy-700"
+          className="block text-sm font-medium text-blueprint-navy-900 mb-1.5"
         >
           {question.label}
           {question.required && (
             <span className="text-red-500 ml-1">*</span>
           )}
         </label>
-        
+
         {question.tooltip && (
-          <div className="group relative">
+          <div className="group relative flex-shrink-0">
             <Info className="w-4 h-4 text-blueprint-navy-400 cursor-help" />
-            <div className="absolute right-0 top-6 z-10 w-64 p-2 bg-blueprint-navy-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+            <div className="absolute right-0 top-6 z-10 w-64 p-3 bg-blueprint-navy-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all shadow-lg">
               {question.tooltip}
             </div>
           </div>
