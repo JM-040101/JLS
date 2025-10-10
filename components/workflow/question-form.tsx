@@ -74,7 +74,7 @@ export default function QuestionForm({ question, value, onChange, disabled }: Qu
             onBlur={handleBlur}
             placeholder={question.placeholder}
             disabled={disabled}
-            rows={4}
+            rows={6}
             className={`input ${error ? 'border-red-500' : ''}`}
           />
         )
