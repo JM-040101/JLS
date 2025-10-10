@@ -75,7 +75,7 @@
   }
 
   textarea.input {
-    @apply min-h-[6rem] resize-y leading-relaxed;
+    @apply resize-none leading-relaxed transition-all duration-200;
   }
 
   select.input {

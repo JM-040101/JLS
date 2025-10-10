@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Info, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -27,6 +27,19 @@ interface QuestionFormProps {
 export default function QuestionForm({ question, value, onChange, disabled }: QuestionFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isTouched, setIsTouched] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current && question.type === 'textarea') {
+      const textarea = textareaRef.current
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto'
+      // Set height to scrollHeight to fit content
+      const newHeight = Math.max(96, textarea.scrollHeight) // min 96px (6rem)
+      textarea.style.height = `${newHeight}px`
+    }
+  }, [value, question.type])
 
   // Validate input
   useEffect(() => {
@@ -68,14 +81,15 @@ export default function QuestionForm({ question, value, onChange, disabled }: Qu
       case 'textarea':
         return (
           <textarea
+            ref={textareaRef}
             id={question.id}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onBlur={handleBlur}
             placeholder={question.placeholder}
             disabled={disabled}
-            rows={6}
             className={`input ${error ? 'border-red-500' : ''}`}
+            style={{ minHeight: '96px', overflow: 'hidden' }}
           />
         )
 
