@@ -45,18 +45,41 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
     }
 
+    // Call AI transformation endpoint to generate professional documentation
+    const transformResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/transform-blueprint`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': request.headers.get('cookie') || '',
+      },
+      body: JSON.stringify({ sessionId: params.id }),
+    })
+
+    let readme, claudeMd, completePlan
+
+    if (transformResponse.ok) {
+      // Use AI-generated documentation
+      const { documents } = await transformResponse.json()
+      readme = documents.readme
+      claudeMd = documents.claudeMd
+      completePlan = documents.completePlan
+    } else {
+      // Fallback to template-based generation if AI fails
+      console.warn('AI transformation failed, using fallback templates')
+      readme = generateReadme(session, phaseTemplates, answers)
+      claudeMd = generateClaudeMd(session, phaseTemplates, answers)
+      completePlan = generateCompletePlan(session, phaseTemplates, answers)
+    }
+
     // Create ZIP file
     const zip = new JSZip()
 
-    // Generate README.md
-    const readme = generateReadme(session, phaseTemplates, answers)
+    // Add AI-generated documentation
     zip.file('README.md', readme)
-
-    // Generate CLAUDE.md
-    const claudeMd = generateClaudeMd(session, phaseTemplates, answers)
     zip.file('CLAUDE.md', claudeMd)
+    zip.file('COMPLETE-PLAN.md', completePlan)
 
-    // Generate phase documentation
+    // Generate phase documentation (keep these as Q&A reference)
     const phasesFolder = zip.folder('phases')
     if (phasesFolder) {
       phaseTemplates.forEach((phase) => {
@@ -65,10 +88,6 @@ export async function GET(
         phasesFolder.file(`phase-${phase.phase_number}-${slugify(phase.title)}.md`, phaseDoc)
       })
     }
-
-    // Generate complete plan view
-    const completePlan = generateCompletePlan(session, phaseTemplates, answers)
-    zip.file('COMPLETE-PLAN.md', completePlan)
 
     // Generate the ZIP as base64, then convert to buffer
     const zipBlob = await zip.generateAsync({ type: 'base64' })
