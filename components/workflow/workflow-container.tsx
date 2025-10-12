@@ -183,9 +183,9 @@ export default function WorkflowContainer({
         })
         .eq('id', session.id)
 
-      toast.success('Blueprint completed! Redirecting to export...')
+      toast.success('Blueprint completed! Generating your plan...')
       setTimeout(() => {
-        router.push(`/export/${session.id}`)
+        router.push(`/preview-plan/${session.id}`)
       }, 2000)
     }
 

@@ -1,7 +1,6 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import JSZip from 'jszip'
 import { readFileSync } from 'fs'
@@ -44,34 +43,31 @@ async function handleExport(sessionId: string) {
       )
     }
 
-    // 4. Fetch all phase answers
-    const { data: answers, error: answersError } = await supabase
-      .from('answers')
-      .select('phase_number, content')
+    // 4. Fetch approved plan from database
+    const { data: plan, error: planError } = await supabase
+      .from('plans')
+      .select('id, content, edited_content, status')
       .eq('session_id', sessionId)
-      .order('phase_number', { ascending: true })
+      .single()
 
-    if (answersError) {
-      console.error('Error fetching answers:', answersError)
-      return NextResponse.json({ error: 'Failed to fetch answers' }, { status: 500 })
+    if (planError || !plan) {
+      console.error('Error fetching plan:', planError)
+      return NextResponse.json({ error: 'Plan not found. Please generate and approve a plan first.' }, { status: 404 })
     }
 
-    if (!answers || answers.length !== 12) {
+    if (plan.status !== 'approved') {
       return NextResponse.json(
-        { error: `Complete all 12 phases before exporting. Currently have ${answers?.length || 0} phases completed.` },
+        { error: 'Plan must be approved before export. Please review and approve your plan first.' },
         { status: 400 }
       )
     }
 
-    // 5. Call GPT-5 (using GPT-4 for now) to create building plan
-    console.log('Calling GPT-4 to create building plan...')
-    const buildingPlan = await callGPT(answers)
+    // Use edited content if available, otherwise use original content
+    const buildingPlan = plan.edited_content || plan.content
 
-    if (!buildingPlan) {
-      return NextResponse.json({ error: 'Failed to generate building plan' }, { status: 500 })
-    }
+    console.log('Using approved building plan for export...')
 
-    // 6. Call Claude to transform plan into files
+    // 5. Call Claude to transform plan into files
     console.log('Calling Claude to generate export files...')
     const files = await callClaude(buildingPlan)
 
@@ -104,45 +100,6 @@ async function handleExport(sessionId: string) {
       { status: 500 }
     )
   }
-}
-
-async function callGPT(answers: Array<{ phase_number: number; content: string }>) {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-  })
-
-  // Load GPT knowledge bases
-  const kb1 = readFileSync(
-    join(process.cwd(), 'ai-workflow/knowledge-base-1.md'),
-    'utf-8'
-  )
-  const kb2 = readFileSync(
-    join(process.cwd(), 'ai-workflow/knowledge-base-2.md'),
-    'utf-8'
-  )
-
-  // Format answers
-  const formattedAnswers = answers
-    .map(a => `**Phase ${a.phase_number}**: ${a.content}`)
-    .join('\n\n')
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4-turbo", // Use gpt-4-turbo for now
-    messages: [
-      {
-        role: "system",
-        content: `You are a SaaS planning expert. Use these knowledge bases to transform user answers into a structured building plan:\n\n${kb1}\n\n---\n\n${kb2}`
-      },
-      {
-        role: "user",
-        content: `Transform these 12-phase workflow answers into a comprehensive SaaS building plan following the knowledge base instructions:\n\n${formattedAnswers}`
-      }
-    ],
-    max_tokens: 4000,
-    temperature: 0.7
-  })
-
-  return completion.choices[0].message.content
 }
 
 async function callClaude(buildingPlan: string) {
