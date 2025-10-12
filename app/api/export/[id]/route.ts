@@ -90,7 +90,7 @@ async function handleExport(sessionId: string) {
     })
 
     // 9. Return ZIP file
-    return new Response(zipBuffer as Buffer, {
+    return new Response(new Uint8Array(zipBuffer), {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
