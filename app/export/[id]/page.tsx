@@ -1,10 +1,10 @@
-import { requireAuth } from '@/lib/auth'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { notFound } from 'next/navigation'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { ArrowLeft, Download, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { ArrowLeft, Download, FileText, Package, Eye } from 'lucide-react'
-import UserMenu from '@/components/auth/user-menu'
-import CompletedPlanView from '@/components/export/completed-plan-view'
 
 interface ExportPageProps {
   params: {
@@ -12,198 +12,168 @@ interface ExportPageProps {
   }
 }
 
-export default async function ExportPage({ params }: ExportPageProps) {
-  const user = await requireAuth()
-  const supabase = createSupabaseServerClient()
+export default function ExportPage({ params }: ExportPageProps) {
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+  const [status, setStatus] = useState<'checking' | 'generating' | 'ready' | 'error'>('checking')
+  const [error, setError] = useState<string | null>(null)
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
-  // Get session data
-  const { data: session, error } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('id', params.id)
-    .eq('user_id', user.id)
-    .single()
+  useEffect(() => {
+    checkPlanAndExport()
+  }, [params.id])
 
-  if (error || !session) {
-    notFound()
+  async function checkPlanAndExport() {
+    try {
+      // Check if plan is approved
+      const { data: plan, error: planError } = await supabase
+        .from('plans')
+        .select('id, status')
+        .eq('session_id', params.id)
+        .single()
+
+      if (planError || !plan) {
+        setError('No plan found. Please complete the workflow first.')
+        setStatus('error')
+        return
+      }
+
+      if (plan.status !== 'approved') {
+        setError('Plan not approved. Please review and approve your plan first.')
+        setStatus('error')
+        return
+      }
+
+      // Plan is approved, trigger export
+      setStatus('generating')
+
+      // Trigger download
+      const url = `/api/export/${params.id}`
+      setDownloadUrl(url)
+
+      // Auto-download
+      window.location.href = url
+
+      // Show success after a delay
+      setTimeout(() => {
+        setStatus('ready')
+      }, 2000)
+
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to export')
+      setStatus('error')
+    }
   }
 
-  // Check if session is completed
-  const isCompleted = session.status === 'completed'
-
-  // Fetch phase templates and answers for completed plans
-  let phaseTemplates = []
-  let answers = []
-
-  if (isCompleted) {
-    const { data: templates } = await supabase
-      .from('phase_templates')
-      .select('*')
-      .order('phase_number', { ascending: true })
-
-    const { data: sessionAnswers } = await supabase
-      .from('answers')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('phase_number', { ascending: true })
-
-    phaseTemplates = templates || []
-    answers = sessionAnswers || []
+  if (status === 'checking') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Checking Plan Status</h2>
+          <p className="text-gray-600">Verifying your approved plan...</p>
+        </div>
+      </div>
+    )
   }
 
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Export Error</h2>
+          <p className="text-gray-600 mb-6 text-center">{error}</p>
+          <div className="flex gap-4">
+            <Link
+              href={`/preview-plan/${params.id}`}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
+            >
+              Review Plan
+            </Link>
+            <Link
+              href="/dashboard"
+              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-center"
+            >
+              Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'generating') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-2xl px-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Export</h2>
+          <p className="text-gray-600 mb-4">
+            Claude is transforming your approved plan into documentation files...
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left">
+            <h3 className="font-semibold text-blue-900 mb-2">✨ What's happening:</h3>
+            <ul className="text-blue-800 space-y-2 text-sm">
+              <li>• Loading your approved building plan</li>
+              <li>• Claude is generating README.md and CLAUDE.md</li>
+              <li>• Creating module documentation files</li>
+              <li>• Generating executable Claude Code prompts</li>
+              <li>• Packaging everything into a ZIP file</li>
+            </ul>
+          </div>
+          <p className="text-gray-500 text-sm mt-4">This usually takes 30-60 seconds...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Status is 'ready'
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white">
-      {/* Header */}
-      <header className="border-b border-blueprint-navy-100 bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+        <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Export Ready!</h2>
+        <p className="text-gray-600 mb-6 text-center">
+          Your blueprint package has been generated. The download should start automatically.
+        </p>
+
+        {downloadUrl && (
+          <a
+            href={downloadUrl}
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-lg mb-4 flex items-center justify-center"
+            download
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Download Again
+          </a>
+        )}
+
+        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-2">📦 Your package includes:</h3>
+          <ul className="text-gray-700 space-y-1 text-sm">
+            <li>✓ README.md - Project overview</li>
+            <li>✓ CLAUDE.md - Claude Code instructions</li>
+            <li>✓ modules/ - Documentation modules</li>
+            <li>✓ prompts/ - Executable prompts</li>
+          </ul>
+        </div>
+
+        <div className="flex gap-4">
+          <Link
+            href={`/workflow/${params.id}`}
+            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-center text-sm"
+          >
+            View Workflow
+          </Link>
           <Link
             href="/dashboard"
-            className="flex items-center space-x-2 text-blueprint-navy-600 hover:text-blueprint-navy-900"
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center text-sm"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Dashboard</span>
+            Dashboard
           </Link>
-          <UserMenu />
         </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-blueprint-navy-900 mb-2">
-            Export Blueprint
-          </h1>
-          <p className="text-blueprint-navy-600">
-            Download your comprehensive SaaS blueprint package
-          </p>
-        </div>
-
-        {!isCompleted ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <div className="flex items-start space-x-3">
-              <FileText className="w-5 h-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-yellow-900">Blueprint Not Ready</h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  This blueprint hasn't been completed yet. Complete all 12 phases to export your documentation.
-                </p>
-                <Link
-                  href={`/workflow/${params.id}`}
-                  className="inline-block mt-4 btn-primary text-sm"
-                >
-                  Continue Blueprint
-                </Link>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Blueprint Info */}
-            <div className="bg-white rounded-lg border border-blueprint-navy-200 p-6">
-              <h2 className="text-xl font-semibold text-blueprint-navy-900 mb-4">
-                Blueprint Details
-              </h2>
-
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-blueprint-navy-600">Project Name</span>
-                  <span className="font-medium text-blueprint-navy-900">
-                    {session.app_description || 'Untitled Blueprint'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blueprint-navy-600">Phases Completed</span>
-                  <span className="font-medium text-blueprint-navy-900">
-                    {session.completed_phases}/12
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blueprint-navy-600">Created</span>
-                  <span className="font-medium text-blueprint-navy-900">
-                    {new Date(session.created_at).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Export Options */}
-            <div className="bg-white rounded-lg border border-blueprint-navy-200 p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Package className="w-5 h-5 text-blueprint-navy-600" />
-                <h2 className="text-xl font-semibold text-blueprint-navy-900">
-                  Export Package
-                </h2>
-              </div>
-
-              <p className="text-blueprint-navy-600 mb-6">
-                Your blueprint will be exported as a ZIP file containing:
-              </p>
-
-              <ul className="space-y-2 mb-6">
-                <li className="flex items-start">
-                  <FileText className="w-4 h-4 text-blueprint-cyan-600 mr-2 mt-1" />
-                  <span className="text-blueprint-navy-700">README.md - Main project overview</span>
-                </li>
-                <li className="flex items-start">
-                  <FileText className="w-4 h-4 text-blueprint-cyan-600 mr-2 mt-1" />
-                  <span className="text-blueprint-navy-700">CLAUDE.md - Claude Code instructions</span>
-                </li>
-                <li className="flex items-start">
-                  <FileText className="w-4 h-4 text-blueprint-cyan-600 mr-2 mt-1" />
-                  <span className="text-blueprint-navy-700">Module documentation (under 50KB each)</span>
-                </li>
-                <li className="flex items-start">
-                  <FileText className="w-4 h-4 text-blueprint-cyan-600 mr-2 mt-1" />
-                  <span className="text-blueprint-navy-700">Executable Claude Code prompts</span>
-                </li>
-              </ul>
-
-              <a
-                href={`/api/export/${params.id}`}
-                className="btn-primary inline-flex items-center"
-                download
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Download Blueprint Package
-              </a>
-              <p className="text-xs text-blueprint-navy-500 mt-2">
-                Download includes README, CLAUDE.md, and all phase documentation
-              </p>
-            </div>
-
-            {/* Completed Plan View */}
-            <CompletedPlanView
-              phaseTemplates={phaseTemplates}
-              answers={answers}
-              sessionName={session.app_description || 'Untitled Blueprint'}
-            />
-
-            {/* View/Edit Answers Section */}
-            <div className="bg-white rounded-lg border border-blueprint-navy-200 p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Eye className="w-5 h-5 text-blueprint-navy-600" />
-                <h2 className="text-xl font-semibold text-blueprint-navy-900">
-                  Interactive View
-                </h2>
-              </div>
-
-              <p className="text-blueprint-navy-600 mb-4">
-                Want to navigate through your blueprint in the full workflow interface? View all phases with the original questions and your answers.
-              </p>
-
-              <Link
-                href={`/workflow/${params.id}`}
-                className="btn-secondary inline-flex items-center"
-              >
-                <FileText className="w-5 h-5 mr-2" />
-                View in Workflow Interface
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
