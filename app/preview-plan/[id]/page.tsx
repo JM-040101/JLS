@@ -29,34 +29,52 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
   async function generatePlan() {
     try {
+      console.log('[PREVIEW-PLAN] Starting plan generation for session:', params.id)
       setIsGenerating(true)
       setError(null)
 
+      console.log('[PREVIEW-PLAN] Calling API:', `/api/generate-plan/${params.id}`)
       const response = await fetch(`/api/generate-plan/${params.id}`, {
         method: 'POST',
       })
 
+      console.log('[PREVIEW-PLAN] API response status:', response.status)
+
       if (!response.ok) {
         const data = await response.json()
+        console.error('[PREVIEW-PLAN] API error response:', data)
         throw new Error(data.error || 'Failed to generate plan')
       }
 
       const data = await response.json()
+      console.log('[PREVIEW-PLAN] Plan received:', {
+        planLength: data.plan?.length || 0,
+        status: data.status,
+        planId: data.planId
+      })
+
       setPlan(data.plan)
       setEditedPlan(data.plan)
       setPlanId(data.planId)
+      console.log('[PREVIEW-PLAN] Plan state updated successfully')
     } catch (err) {
+      console.error('[PREVIEW-PLAN] Error generating plan:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate plan')
     } finally {
       setIsGenerating(false)
       setIsLoading(false)
+      console.log('[PREVIEW-PLAN] Generation complete')
     }
   }
 
   async function savePlanEdits() {
-    if (!planId) return
+    if (!planId) {
+      console.error('[PREVIEW-PLAN] No planId available for saving')
+      return
+    }
 
     try {
+      console.log('[PREVIEW-PLAN] Saving plan edits for plan:', planId)
       setIsSaving(true)
       setError(null)
 
@@ -69,11 +87,16 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         })
         .eq('id', planId)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('[PREVIEW-PLAN] Error saving edits:', updateError)
+        throw updateError
+      }
 
+      console.log('[PREVIEW-PLAN] Edits saved successfully')
       setPlan(editedPlan)
       setIsEditing(false)
     } catch (err) {
+      console.error('[PREVIEW-PLAN] Failed to save edits:', err)
       setError(err instanceof Error ? err.message : 'Failed to save edits')
     } finally {
       setIsSaving(false)
@@ -81,9 +104,13 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   }
 
   async function approvePlan() {
-    if (!planId) return
+    if (!planId) {
+      console.error('[PREVIEW-PLAN] No planId available for approval')
+      return
+    }
 
     try {
+      console.log('[PREVIEW-PLAN] Approving plan:', planId)
       setIsApproving(true)
       setError(null)
 
@@ -95,11 +122,16 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         })
         .eq('id', planId)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('[PREVIEW-PLAN] Error approving plan:', updateError)
+        throw updateError
+      }
 
+      console.log('[PREVIEW-PLAN] Plan approved, redirecting to export...')
       // Redirect to export page
       router.push(`/export/${params.id}`)
     } catch (err) {
+      console.error('[PREVIEW-PLAN] Failed to approve plan:', err)
       setError(err instanceof Error ? err.message : 'Failed to approve plan')
     } finally {
       setIsApproving(false)
