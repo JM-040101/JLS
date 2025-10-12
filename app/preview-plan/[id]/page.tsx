@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
+import 'highlight.js/styles/github-dark.css'
 
 interface PlanPreviewProps {
   params: {
@@ -143,60 +148,6 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
     setIsEditing(false)
   }
 
-  // Format plan content for beautiful display
-  function formatPlanForDisplay(content: string): string {
-    if (!content) return ''
-
-    let formatted = content
-
-    // Convert markdown-style headers to HTML with styling
-    formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-4xl font-bold text-gray-900 mb-6 mt-8 pb-3 border-b-4 border-blue-600">$1</h1>')
-    formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-3xl font-bold text-gray-800 mb-4 mt-8 pb-2 border-b-2 border-blue-400">$1</h2>')
-    formatted = formatted.replace(/^### (.+)$/gm, '<h3 class="text-2xl font-semibold text-gray-700 mb-3 mt-6">$1</h3>')
-    formatted = formatted.replace(/^#### (.+)$/gm, '<h4 class="text-xl font-semibold text-gray-600 mb-2 mt-4">$4</h4>')
-
-    // Convert bold text
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>')
-
-    // Convert lists with better styling
-    formatted = formatted.replace(/^- (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700">$1</li>')
-    formatted = formatted.replace(/^\* (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700">$1</li>')
-    formatted = formatted.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700"><span class="font-semibold text-blue-600">$1.</span> $2</li>')
-
-    // Wrap consecutive list items in ul/ol tags
-    formatted = formatted.replace(/(<li class="ml-6 mb-2 text-gray-700">(?:(?!<li).)*<\/li>\s*)+/g, match => {
-      if (match.includes('<span class="font-semibold')) {
-        return `<ol class="list-decimal mb-4">${match}</ol>`
-      }
-      return `<ul class="list-disc mb-4">${match}</ul>`
-    })
-
-    // Convert code blocks
-    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto mb-4 font-mono text-sm"><code>$2</code></pre>')
-
-    // Convert inline code
-    formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-red-600 px-2 py-1 rounded font-mono text-sm">$1</code>')
-
-    // Convert horizontal rules
-    formatted = formatted.replace(/^---$/gm, '<hr class="my-8 border-t-2 border-gray-300" />')
-
-    // Convert paragraphs (double line breaks)
-    formatted = formatted.split('\n\n').map(para => {
-      if (para.trim() &&
-          !para.startsWith('<h') &&
-          !para.startsWith('<li') &&
-          !para.startsWith('<ul') &&
-          !para.startsWith('<ol') &&
-          !para.startsWith('<pre') &&
-          !para.startsWith('<hr')) {
-        return `<p class="mb-4 text-gray-700 leading-relaxed">${para}</p>`
-      }
-      return para
-    }).join('\n')
-
-    return formatted
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -244,23 +195,40 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
           {!isEditing ? (
             <>
-              {/* Plan Display with Enhanced Formatting */}
-              <div className="p-8">
-                <div className="prose prose-lg max-w-none">
-                  <div
-                    className="plan-content text-gray-800 leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: formatPlanForDisplay(plan)
+              {/* Plan Display with Beautiful Markdown Rendering */}
+              <div className="p-8 sm:p-10 lg:p-12">
+                <article className="prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h1:border-blue-600 prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h2:border-blue-400 prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h3:text-gray-800 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-h4:text-gray-700 prose-p:leading-relaxed prose-p:text-gray-700 prose-p:mb-4 prose-strong:text-gray-900 prose-strong:font-semibold prose-code:text-pink-600 prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-pre:border-gray-700 prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-li:text-gray-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-blue-500 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:border-gray-300 prose-hr:my-8 prose-table:border-collapse prose-th:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                    components={{
+                      h1: ({node, ...props}) => <h1 className="scroll-mt-20" {...props} />,
+                      h2: ({node, ...props}) => <h2 className="scroll-mt-20" {...props} />,
+                      h3: ({node, ...props}) => <h3 className="scroll-mt-20" {...props} />,
+                      code: ({node, inline, className, children, ...props}: any) => {
+                        const match = /language-(\w+)/.exec(className || '')
+                        return !inline ? (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        )
+                      }
                     }}
-                  />
-                </div>
+                  >
+                    {plan}
+                  </ReactMarkdown>
+                </article>
               </div>
 
               {/* Edit Button */}
-              <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
+              <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-md"
+                  className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-200"
                 >
                   ✏️ Edit Plan
                 </button>
@@ -268,29 +236,50 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             </>
           ) : (
             <>
-              <textarea
-                value={editedPlan}
-                onChange={(e) => setEditedPlan(e.target.value)}
-                className="w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                placeholder="Edit your plan..."
-              />
+              {/* Edit Mode */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Edit your building plan (Markdown supported)
+                  </label>
+                  <textarea
+                    value={editedPlan}
+                    onChange={(e) => setEditedPlan(e.target.value)}
+                    className="w-full h-[600px] p-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-y transition-colors"
+                    placeholder="Edit your plan using Markdown formatting..."
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Tip: Use Markdown syntax for formatting (# headers, **bold**, `code`, etc.)
+                  </p>
+                </div>
 
-              {/* Edit Actions */}
-              <div className="mt-6 flex gap-4">
-                <button
-                  onClick={savePlanEdits}
-                  disabled={isSaving}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Saving...' : '💾 Save Changes'}
-                </button>
-                <button
-                  onClick={cancelEditing}
-                  disabled={isSaving}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
+                {/* Edit Actions */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={savePlanEdits}
+                    disabled={isSaving}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 duration-200"
+                  >
+                    {isSaving ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </span>
+                    ) : (
+                      '💾 Save Changes'
+                    )}
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </>
           )}
