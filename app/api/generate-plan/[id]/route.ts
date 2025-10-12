@@ -436,35 +436,12 @@ Generate a structured Markdown document following this template:
 ### Core Tables & Schema
 [List main tables with relationships, from user's requirements + KB1 templates]
 
-**Example**:
-```sql
--- Users table
-users (
-  id UUID PRIMARY KEY,
-  email TEXT,
-  organisation_id UUID REFERENCES organisations(id),
-  role TEXT,
-  created_at TIMESTAMPTZ
-)
+**Example Schema**:
+- Users table: id, email, organisation_id, role, created_at
+- Organisations table: id, name, plan, created_at
+- Core resource table: id, organisation_id, created_by, [key_attributes], created_at, updated_at
 
--- Organisations table
-organisations (
-  id UUID PRIMARY KEY,
-  name TEXT,
-  plan TEXT,
-  created_at TIMESTAMPTZ
-)
-
--- [Core resource table from user's requirements]
-[resource_name] (
-  id UUID PRIMARY KEY,
-  organisation_id UUID REFERENCES organisations(id), -- KB1: index this!
-  created_by UUID REFERENCES users(id),
-  [key_attributes],
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
-)
-```
+**Important**: Add BTREE indexes on organisation_id columns (KB1: missing_org_index pitfall)
 
 **Indexes**: [List required indexes, reference KB1 pitfall: "missing_org_index"]
 
