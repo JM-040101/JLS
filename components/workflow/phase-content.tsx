@@ -57,10 +57,10 @@ export default function PhaseContent({
           </div>
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="btn-ghost p-2 flex-shrink-0"
+            className="btn-ghost p-2 flex-shrink-0 transition-all hover:scale-110"
             title="Show help"
           >
-            <HelpCircle className="w-5 h-5 text-blueprint-cyan-600" />
+            <HelpCircle className="w-5 h-5 text-blueprint-cyan-600 transition-transform" />
           </button>
         </div>
 
@@ -136,9 +136,9 @@ export default function PhaseContent({
                     window.dispatchEvent(event)
                   }
                 }}
-                className="btn-ghost flex items-center text-blueprint-navy-600 hover:text-blueprint-navy-900 transition-colors"
+                className="btn-ghost flex items-center text-blueprint-navy-600 hover:text-blueprint-navy-900 transition-all hover:-translate-x-1"
               >
-                <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                <ArrowRight className="w-4 h-4 mr-2 rotate-180 transition-transform group-hover:-translate-x-1" />
                 Previous Phase
               </button>
             )}
@@ -164,19 +164,19 @@ export default function PhaseContent({
               onClick={onPhaseComplete}
               disabled={!allRequiredAnswered || !canProceed}
               className={`
-                btn-primary flex items-center
-                ${!allRequiredAnswered || !canProceed ? 'opacity-50 cursor-not-allowed' : ''}
+                btn-primary flex items-center transition-all
+                ${!allRequiredAnswered || !canProceed ? 'opacity-50 cursor-not-allowed' : 'hover:translate-x-1'}
               `}
             >
               {isLastPhase ? (
                 <>
-                  <Trophy className="w-4 h-4 mr-2" />
+                  <Trophy className="w-4 h-4 mr-2 transition-transform group-hover:scale-110" />
                   Complete Blueprint
                 </>
               ) : (
                 <>
                   Next Phase
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                 </>
               )}
             </button>
