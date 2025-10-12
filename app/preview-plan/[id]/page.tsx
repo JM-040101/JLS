@@ -143,6 +143,60 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
     setIsEditing(false)
   }
 
+  // Format plan content for beautiful display
+  function formatPlanForDisplay(content: string): string {
+    if (!content) return ''
+
+    let formatted = content
+
+    // Convert markdown-style headers to HTML with styling
+    formatted = formatted.replace(/^# (.+)$/gm, '<h1 class="text-4xl font-bold text-gray-900 mb-6 mt-8 pb-3 border-b-4 border-blue-600">$1</h1>')
+    formatted = formatted.replace(/^## (.+)$/gm, '<h2 class="text-3xl font-bold text-gray-800 mb-4 mt-8 pb-2 border-b-2 border-blue-400">$1</h2>')
+    formatted = formatted.replace(/^### (.+)$/gm, '<h3 class="text-2xl font-semibold text-gray-700 mb-3 mt-6">$1</h3>')
+    formatted = formatted.replace(/^#### (.+)$/gm, '<h4 class="text-xl font-semibold text-gray-600 mb-2 mt-4">$4</h4>')
+
+    // Convert bold text
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>')
+
+    // Convert lists with better styling
+    formatted = formatted.replace(/^- (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700">$1</li>')
+    formatted = formatted.replace(/^\* (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700">$1</li>')
+    formatted = formatted.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-6 mb-2 text-gray-700"><span class="font-semibold text-blue-600">$1.</span> $2</li>')
+
+    // Wrap consecutive list items in ul/ol tags
+    formatted = formatted.replace(/(<li class="ml-6 mb-2 text-gray-700">(?:(?!<li).)*<\/li>\s*)+/g, match => {
+      if (match.includes('<span class="font-semibold')) {
+        return `<ol class="list-decimal mb-4">${match}</ol>`
+      }
+      return `<ul class="list-disc mb-4">${match}</ul>`
+    })
+
+    // Convert code blocks
+    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto mb-4 font-mono text-sm"><code>$2</code></pre>')
+
+    // Convert inline code
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-red-600 px-2 py-1 rounded font-mono text-sm">$1</code>')
+
+    // Convert horizontal rules
+    formatted = formatted.replace(/^---$/gm, '<hr class="my-8 border-t-2 border-gray-300" />')
+
+    // Convert paragraphs (double line breaks)
+    formatted = formatted.split('\n\n').map(para => {
+      if (para.trim() &&
+          !para.startsWith('<h') &&
+          !para.startsWith('<li') &&
+          !para.startsWith('<ul') &&
+          !para.startsWith('<ol') &&
+          !para.startsWith('<pre') &&
+          !para.startsWith('<hr')) {
+        return `<p class="mb-4 text-gray-700 leading-relaxed">${para}</p>`
+      }
+      return para
+    }).join('\n')
+
+    return formatted
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -187,20 +241,26 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         </div>
 
         {/* Plan Content */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
           {!isEditing ? (
             <>
-              <div className="prose prose-lg max-w-none">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {plan}
+              {/* Plan Display with Enhanced Formatting */}
+              <div className="p-8">
+                <div className="prose prose-lg max-w-none">
+                  <div
+                    className="plan-content text-gray-800 leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: formatPlanForDisplay(plan)
+                    }}
+                  />
                 </div>
               </div>
 
               {/* Edit Button */}
-              <div className="mt-8 pt-8 border-t border-gray-200">
+              <div className="px-8 py-6 bg-gray-50 border-t border-gray-200">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-md"
                 >
                   ✏️ Edit Plan
                 </button>
