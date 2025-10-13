@@ -43,6 +43,24 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
     }
 
     console.log('[PREVIEW-PLAN] User authenticated:', user.id)
+
+    // Check if a plan already exists before generating a new one
+    const { data: existingPlan } = await supabase
+      .from('plans')
+      .select('id, content, edited_content, status')
+      .eq('session_id', params.id)
+      .maybeSingle()
+
+    if (existingPlan) {
+      console.log('[PREVIEW-PLAN] Found existing plan:', existingPlan.id, 'Status:', existingPlan.status)
+      setPlan(existingPlan.edited_content || existingPlan.content)
+      setEditedPlan(existingPlan.edited_content || existingPlan.content)
+      setPlanId(existingPlan.id)
+      setIsLoading(false)
+      return
+    }
+
+    console.log('[PREVIEW-PLAN] No existing plan found, generating new one...')
     generatePlan()
   }
 
