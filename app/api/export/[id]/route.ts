@@ -74,7 +74,7 @@ async function handleExport(sessionId: string) {
       if (existingExport.status === 'processing') {
         console.log('[EXPORT] Export is still processing:', existingExport.id)
         return NextResponse.json({
-          message: 'Export is being generated. This takes 6-8 minutes due to AI processing. Please try again in a few minutes.',
+          message: 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel). Please check back in 7 minutes.',
           status: 'processing',
           exportId: existingExport.id
         }, { status: 202 })
