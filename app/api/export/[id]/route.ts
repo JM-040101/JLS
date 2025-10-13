@@ -34,19 +34,19 @@ async function handleExport(sessionId: string) {
 
     console.log('[EXPORT] Starting export for session:', sessionId)
 
-    // 3. Check rate limiting (5 exports per day)
-    const { count } = await supabase
-      .from('exports')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    // 3. Check rate limiting (disabled for testing)
+    // const { count } = await supabase
+    //   .from('exports')
+    //   .select('*', { count: 'exact', head: true })
+    //   .eq('user_id', user.id)
+    //   .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
 
-    if (count && count >= 5) {
-      return NextResponse.json(
-        { error: 'Export limit reached. Maximum 5 exports per 24 hours.' },
-        { status: 429 }
-      )
-    }
+    // if (count && count >= 5) {
+    //   return NextResponse.json(
+    //     { error: 'Export limit reached. Maximum 5 exports per 24 hours.' },
+    //     { status: 429 }
+    //   )
+    // }
 
     // 4. Fetch approved plan from database
     const { data: plan, error: planError } = await supabase
