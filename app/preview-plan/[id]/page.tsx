@@ -101,7 +101,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   }
 
   async function pollForJobCompletion(jobId: string) {
-    const maxAttempts = 60 // 60 attempts * 2 seconds = 2 minutes max
+    const maxAttempts = 150 // 150 attempts * 2 seconds = 5 minutes max (matches backend timeout)
     let attempts = 0
 
     while (attempts < maxAttempts) {
