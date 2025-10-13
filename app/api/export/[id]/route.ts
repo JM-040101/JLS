@@ -239,6 +239,7 @@ function parseClaudeOutput(content: any) {
   const files = {
     readme: '',
     claude: '',
+    userInstructions: '',
     modules: {} as Record<string, string>,
     prompts: {} as Record<string, string>
   }
@@ -247,32 +248,60 @@ function parseClaudeOutput(content: any) {
   const fileMatches = text.matchAll(/## File: (.+?)\n```(?:markdown)?\n([\s\S]+?)\n```/g)
 
   let matchCount = 0
+  const parsedFiles: string[] = []
+
   for (const match of fileMatches) {
     matchCount++
     const filePath = match[1].trim()
     const fileContent = match[2]
 
     console.log(`[PARSE-CLAUDE] Parsing file: ${filePath}`)
+    parsedFiles.push(filePath)
 
+    // Handle top-level files
     if (filePath === 'README.md' || filePath.endsWith('/README.md')) {
       files.readme = fileContent
     } else if (filePath === 'CLAUDE.md' || filePath.endsWith('/CLAUDE.md')) {
       files.claude = fileContent
-    } else if (filePath.includes('modules/') || filePath.includes('Claude-')) {
+    } else if (filePath === 'USER_INSTRUCTIONS.md' || filePath.endsWith('/USER_INSTRUCTIONS.md')) {
+      files.userInstructions = fileContent
+    }
+    // Handle module files (must contain 'modules/' in path)
+    else if (filePath.includes('modules/')) {
       const moduleName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'module'
       files.modules[moduleName] = fileContent
-    } else if (filePath.includes('prompts/')) {
-      const promptName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'prompt'
-      files.prompts[promptName] = fileContent
+    }
+    // Handle prompt files (must contain 'prompts/' in path OR start with number)
+    else if (filePath.includes('prompts/') || /^\d{2}-/.test(filePath.split('/').pop() || '')) {
+      const fileName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'prompt'
+      files.prompts[fileName] = fileContent
     }
   }
 
   console.log(`[PARSE-CLAUDE] Parsed ${matchCount} files:`, {
     hasReadme: !!files.readme,
     hasClaude: !!files.claude,
+    hasUserInstructions: !!files.userInstructions,
     moduleCount: Object.keys(files.modules).length,
-    promptCount: Object.keys(files.prompts).length
+    promptCount: Object.keys(files.prompts).length,
+    allParsedFiles: parsedFiles
   })
+
+  // Validation warnings for expected files
+  const expectedModules = ['auth-module', 'api-module', 'database-module', 'ui-module', 'payments-module']
+  const missingModules = expectedModules.filter(m => !files.modules[m])
+  if (missingModules.length > 0) {
+    console.warn('[PARSE-CLAUDE] Missing expected modules:', missingModules)
+  }
+
+  const expectedPromptCount = 7 // 01-setup through 07-deploy
+  if (Object.keys(files.prompts).length < expectedPromptCount) {
+    console.warn(`[PARSE-CLAUDE] Expected ${expectedPromptCount} prompts, found ${Object.keys(files.prompts).length}`)
+  }
+
+  if (!files.userInstructions) {
+    console.warn('[PARSE-CLAUDE] Missing USER_INSTRUCTIONS.md')
+  }
 
   // If no files were parsed, try to extract at least README from full text
   if (matchCount === 0) {
@@ -287,12 +316,16 @@ function parseClaudeOutput(content: any) {
 async function createZip(files: {
   readme: string
   claude: string
+  userInstructions: string
   modules: Record<string, string>
   prompts: Record<string, string>
 }) {
   const zip = new JSZip()
 
-  // Add main files
+  // Add main files in order
+  if (files.userInstructions) {
+    zip.file('USER_INSTRUCTIONS.md', files.userInstructions)
+  }
   if (files.readme) {
     zip.file('README.md', files.readme)
   }
@@ -300,21 +333,32 @@ async function createZip(files: {
     zip.file('CLAUDE.md', files.claude)
   }
 
-  // Add modules
+  // Add modules folder
   if (Object.keys(files.modules).length > 0) {
     const modulesFolder = zip.folder('modules')
-    for (const [name, content] of Object.entries(files.modules)) {
+    // Sort module files alphabetically for consistency
+    const sortedModules = Object.entries(files.modules).sort(([a], [b]) => a.localeCompare(b))
+    for (const [name, content] of sortedModules) {
       modulesFolder?.file(`${name}.md`, content)
     }
+    console.log(`[CREATE-ZIP] Added ${sortedModules.length} module files`)
   }
 
-  // Add prompts
+  // Add prompts folder
   if (Object.keys(files.prompts).length > 0) {
     const promptsFolder = zip.folder('prompts')
-    for (const [name, content] of Object.entries(files.prompts)) {
+    // Sort prompt files by number prefix to maintain order (01-, 02-, etc.)
+    const sortedPrompts = Object.entries(files.prompts).sort(([a], [b]) => {
+      const aNum = parseInt(a.match(/^\d+/)?.[0] || '999')
+      const bNum = parseInt(b.match(/^\d+/)?.[0] || '999')
+      return aNum - bNum
+    })
+    for (const [name, content] of sortedPrompts) {
       promptsFolder?.file(`${name}.md`, content)
     }
+    console.log(`[CREATE-ZIP] Added ${sortedPrompts.length} prompt files`)
   }
 
+  console.log('[CREATE-ZIP] ZIP structure created successfully')
   return await zip.generateAsync({ type: 'nodebuffer' })
 }
