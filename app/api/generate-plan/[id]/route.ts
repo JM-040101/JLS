@@ -38,23 +38,42 @@ async function handleGeneratePlan(sessionId: string) {
 
     // 3. Check if there's already a pending/processing job
     console.log('[GENERATE-PLAN] Checking for existing jobs...')
-    const { data: existingJob, error: jobCheckError } = await supabase
+    const { data: existingJobs, error: jobCheckError } = await supabase
       .from('jobs')
-      .select('id, status')
+      .select('id, status, updated_at')
       .eq('session_id', sessionId)
       .eq('user_id', user.id)
       .in('status', ['pending', 'processing'])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
 
-    if (existingJob) {
-      console.log('[GENERATE-PLAN] Found existing job:', existingJob.id, existingJob.status)
-      return NextResponse.json({
-        jobId: existingJob.id,
-        status: existingJob.status,
-        message: 'Job already in progress'
-      })
+    if (existingJobs && existingJobs.length > 0) {
+      const existingJob = existingJobs[0]
+
+      // Check if job is stuck (processing for more than 5 minutes)
+      const updatedAt = new Date(existingJob.updated_at)
+      const now = new Date()
+      const minutesElapsed = (now.getTime() - updatedAt.getTime()) / 1000 / 60
+
+      if (existingJob.status === 'processing' && minutesElapsed > 5) {
+        console.log('[GENERATE-PLAN] Found stuck job (processing for', minutesElapsed.toFixed(1), 'minutes), marking as failed')
+        await supabase
+          .from('jobs')
+          .update({
+            status: 'failed',
+            error_message: 'Job timed out after 5 minutes',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingJob.id)
+
+        // Continue to create a new job below
+      } else {
+        console.log('[GENERATE-PLAN] Found existing active job:', existingJob.id, existingJob.status)
+        return NextResponse.json({
+          jobId: existingJob.id,
+          status: existingJob.status,
+          message: 'Job already in progress'
+        })
+      }
     }
 
     // 4. Check if plan already exists and is approved
