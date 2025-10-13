@@ -303,13 +303,14 @@ export const generateExportFunction = inngest.createFunction(
         return data.edited_content || data.content
       })
 
-      // Step 3: Call Claude to generate export files (no timeout!)
-      const files = await step.run('call-claude', async () => {
-        console.log('[INNGEST-EXPORT] Calling Claude to generate files...')
-        const exportFiles = await callClaudeForExport(plan)
+      // Step 3: Call Claude in 3 parts with rate limiting (no timeout!)
+      const files = await step.run('call-claude-parts', async () => {
+        console.log('[INNGEST-EXPORT] Calling Claude to generate files (3-part split)...')
+        const exportFiles = await callClaudeForExportInParts(plan)
         console.log('[INNGEST-EXPORT] Claude generated files:', {
           hasReadme: !!exportFiles.readme,
           hasClaude: !!exportFiles.claude,
+          hasUserInstructions: !!exportFiles.userInstructions,
           moduleCount: Object.keys(exportFiles.modules).length,
           promptCount: Object.keys(exportFiles.prompts).length
         })
@@ -351,7 +352,504 @@ export const generateExportFunction = inngest.createFunction(
   }
 )
 
-// Claude call function for export file generation
+// Claude call function for export file generation (split into 4 parts for completeness)
+async function callClaudeForExportInParts(buildingPlan: string) {
+  console.log('[CALL-CLAUDE-PARTS] Starting 4-part Claude export generation with enhanced completeness validation')
+
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('Anthropic API key not configured')
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    })
+
+    // Load knowledge bases
+    const kb1 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-1.md'),
+      'utf-8'
+    )
+    const kb2 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-2.md'),
+      'utf-8'
+    )
+
+    // CALL 1: Generate core documentation files (ENHANCED)
+    console.log('[CALL-CLAUDE-PARTS] Call 1/4: Generating core documentation...')
+    const docsPrompt = `You are an expert technical writer. Generate COMPLETE, COMPREHENSIVE documentation files. DO NOT truncate or summarize - write FULL, DETAILED content for each file.
+
+**CRITICAL INSTRUCTIONS:**
+- Each file must be 1500-2500 words minimum
+- Include ALL sections listed below
+- Write complete paragraphs, not bullet points
+- Include code examples where relevant
+- End each file with a clear conclusion
+- DO NOT use phrases like "..." or "[continue]" or "[more details]"
+
+Generate EXACTLY 4 files:
+
+1. **USER_INSTRUCTIONS.md** (2000+ words)
+   - What's included in this export
+   - How to navigate the documentation
+   - Step-by-step guide to using Claude Code with CLAUDE.md
+   - How to use the numbered prompt files in sequence
+   - Prerequisites and setup requirements
+   - Tips for customization
+   - Troubleshooting common issues
+
+2. **README.md** (1500+ words)
+   - Project name and tagline
+   - Problem statement (detailed)
+   - Target audience analysis
+   - Core features with detailed descriptions
+   - Complete tech stack with rationale
+   - Architecture diagram in ASCII art
+   - Getting started guide
+   - Project structure overview
+   - Contributing guidelines
+
+3. **CLAUDE.md** (1000+ words)
+   - Comprehensive project overview
+   - Module structure with detailed links
+   - Development workflow
+   - Code standards and conventions
+   - Testing requirements
+   - Database schema with relationships
+   - API endpoint documentation
+   - Security requirements
+   - Performance considerations
+
+4. **QUICK_START.md** (800+ words)
+   - 5-minute setup guide
+   - Environment variables template
+   - Database setup commands
+   - First-time run instructions
+   - Verification steps
+   - Next steps after setup
+
+Format each file EXACTLY as:
+## File: filename.md
+\`\`\`markdown
+[COMPLETE file content - DO NOT TRUNCATE]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**REMINDER: Write COMPLETE files. No summaries. No truncation.**`
+
+    const docsCall = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: docsPrompt }]
+    })
+
+    const docsStopReason = docsCall.stop_reason
+    console.log('[CALL-CLAUDE-PARTS] Call 1/4 completed:', {
+      stopReason: docsStopReason,
+      inputTokens: docsCall.usage?.input_tokens,
+      outputTokens: docsCall.usage?.output_tokens
+    })
+
+    if (docsStopReason === 'max_tokens') {
+      console.warn('[CALL-CLAUDE-PARTS] WARNING: Call 1/4 hit max_tokens - files may be incomplete')
+    }
+
+    // Wait 240 seconds to avoid rate limit (4000 tokens/min = need 4 min between 16k token calls)
+    console.log('[CALL-CLAUDE-PARTS] Waiting 240s before next call to avoid rate limit...')
+    await new Promise(resolve => setTimeout(resolve, 240000))
+
+    // CALL 2: Generate module README files (ENHANCED - 8 modules)
+    console.log('[CALL-CLAUDE-PARTS] Call 2/4: Generating module READMEs...')
+    const modulesPrompt = `You are an expert software architect. Generate COMPLETE, DETAILED module documentation. Each module README must be 500-800 words with ALL sections completed.
+
+**CRITICAL INSTRUCTIONS:**
+- Write COMPLETE content for each module
+- Include real code examples (not pseudo-code)
+- Explain WHY and HOW, not just WHAT
+- Include file structure diagrams
+- DO NOT truncate or use placeholders
+
+Generate EXACTLY 8 module README files:
+
+1. **modules/auth/README.md** (600+ words)
+   - Authentication strategy with code examples
+   - User roles and permissions matrix
+   - Session management implementation
+   - JWT/OAuth flow diagrams
+   - Security best practices
+   - Example middleware code
+
+2. **modules/api/README.md** (600+ words)
+   - API architecture with endpoint list
+   - Request/response examples
+   - Rate limiting implementation
+   - Error handling patterns with examples
+   - Validation schemas
+   - API versioning strategy
+
+3. **modules/database/README.md** (700+ words)
+   - Complete schema with SQL
+   - Multi-tenancy implementation
+   - RLS policy examples
+   - Migration strategy with examples
+   - Indexing recommendations
+   - Query optimization tips
+
+4. **modules/ui/README.md** (600+ words)
+   - Component hierarchy diagram
+   - Design system tokens
+   - Routing structure
+   - State management patterns
+   - Responsive breakpoints
+   - Example component code
+
+5. **modules/payments/README.md** (600+ words)
+   - Stripe integration guide
+   - Subscription tier implementation
+   - Webhook handling with examples
+   - EU VAT compliance steps
+   - Payment flow diagrams
+   - Error recovery patterns
+
+6. **modules/deployment/README.md** (500+ words)
+   - Vercel deployment checklist
+   - Environment variables guide
+   - CI/CD pipeline setup
+   - Domain configuration
+   - Performance monitoring
+   - Rollback procedures
+
+7. **modules/testing/README.md** (500+ words)
+   - Testing strategy overview
+   - Unit test examples
+   - Integration test patterns
+   - E2E test setup
+   - Test coverage requirements
+   - Mocking strategies
+
+8. **modules/security/README.md** (600+ words)
+   - Security checklist
+   - Input validation patterns
+   - XSS prevention examples
+   - CSRF protection
+   - SQL injection prevention
+   - Rate limiting implementation
+
+Format each file EXACTLY as:
+## File: modules/module-name/README.md
+\`\`\`markdown
+[COMPLETE file content with ALL sections]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**REMINDER: Write COMPLETE modules. Include ALL code examples.**`
+
+    const modulesCall = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: modulesPrompt }]
+    })
+
+    const modulesStopReason = modulesCall.stop_reason
+    console.log('[CALL-CLAUDE-PARTS] Call 2/4 completed:', {
+      stopReason: modulesStopReason,
+      inputTokens: modulesCall.usage?.input_tokens,
+      outputTokens: modulesCall.usage?.output_tokens
+    })
+
+    if (modulesStopReason === 'max_tokens') {
+      console.warn('[CALL-CLAUDE-PARTS] WARNING: Call 2/4 hit max_tokens - files may be incomplete')
+    }
+
+    // Wait 240 seconds before next call
+    console.log('[CALL-CLAUDE-PARTS] Waiting 240s before next call to avoid rate limit...')
+    await new Promise(resolve => setTimeout(resolve, 240000))
+
+    // CALL 3: Generate prompt files part 1 (ENHANCED - first 5 prompts)
+    console.log('[CALL-CLAUDE-PARTS] Call 3/4: Generating implementation prompts (part 1/2)...')
+    const prompts1Prompt = `You are an expert developer coach. Generate COMPLETE, ACTIONABLE implementation prompts. Each prompt must be 400-600 words with DETAILED steps and code examples.
+
+**CRITICAL INSTRUCTIONS:**
+- Write COMPLETE implementation guides
+- Include actual code snippets (not pseudo-code)
+- Provide specific file paths and commands
+- Include validation steps to verify success
+- Write clear prerequisites
+
+Generate EXACTLY 5 prompt files (part 1 of 2):
+
+1. **prompts/01-setup-project.md** (500+ words)
+   - Context: What we're building and why
+   - Prerequisites checklist (Node, Git, etc.)
+   - Step-by-step Next.js 14 setup
+   - Dependency installation with exact versions
+   - Folder structure with tree diagram
+   - Environment variables template
+   - Success criteria with verification commands
+   - Next steps link to prompt 02
+
+2. **prompts/02-setup-database.md** (550+ words)
+   - Context: Database architecture overview
+   - Supabase project creation steps
+   - Complete schema SQL code
+   - RLS policies with examples
+   - Migration setup and commands
+   - Seeding test data scripts
+   - Connection verification steps
+   - Next steps link to prompt 03
+
+3. **prompts/03-setup-auth.md** (600+ words)
+   - Context: Authentication flow diagram
+   - Supabase Auth setup guide
+   - Middleware implementation code
+   - Protected route examples
+   - Session management code
+   - Error handling patterns
+   - Testing authentication flow
+   - Next steps link to prompt 04
+
+4. **prompts/04-create-api.md** (600+ words)
+   - Context: API architecture overview
+   - Endpoint list with methods
+   - Route handler implementation examples
+   - Input validation with Zod
+   - Error handling middleware
+   - Rate limiting setup
+   - API testing with examples
+   - Next steps link to prompt 05
+
+5. **prompts/05-create-ui.md** (600+ words)
+   - Context: UI component hierarchy
+   - Design system setup (Tailwind config)
+   - Core component implementations
+   - Routing structure
+   - State management patterns
+   - Form handling with examples
+   - Responsive design testing
+   - Next steps link to prompt 06
+
+Format each file EXACTLY as:
+## File: prompts/##-name.md
+\`\`\`markdown
+[COMPLETE prompt content with ALL code examples]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**REMINDER: Write COMPLETE prompts. Include ALL code examples and commands.**`
+
+    const prompts1Call = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: prompts1Prompt }]
+    })
+
+    const prompts1StopReason = prompts1Call.stop_reason
+    console.log('[CALL-CLAUDE-PARTS] Call 3/4 completed:', {
+      stopReason: prompts1StopReason,
+      inputTokens: prompts1Call.usage?.input_tokens,
+      outputTokens: prompts1Call.usage?.output_tokens
+    })
+
+    if (prompts1StopReason === 'max_tokens') {
+      console.warn('[CALL-CLAUDE-PARTS] WARNING: Call 3/4 hit max_tokens - files may be incomplete')
+    }
+
+    // Wait 240 seconds before final call
+    console.log('[CALL-CLAUDE-PARTS] Waiting 240s before final call to avoid rate limit...')
+    await new Promise(resolve => setTimeout(resolve, 240000))
+
+    // CALL 4: Generate prompt files part 2 (final 4 prompts)
+    console.log('[CALL-CLAUDE-PARTS] Call 4/4: Generating implementation prompts (part 2/2)...')
+    const prompts2Prompt = `You are an expert developer coach. Generate COMPLETE, ACTIONABLE implementation prompts. Each prompt must be 400-600 words with DETAILED steps and code examples.
+
+**CRITICAL INSTRUCTIONS:**
+- Write COMPLETE implementation guides
+- Include actual code snippets (not pseudo-code)
+- Provide specific file paths and commands
+- Include validation steps to verify success
+- Write clear prerequisites
+
+Generate EXACTLY 4 prompt files (part 2 of 2):
+
+6. **prompts/06-integrate-payments.md** (650+ words)
+   - Context: Payment flow architecture
+   - Stripe account setup guide
+   - API keys configuration
+   - Subscription creation code
+   - Webhook endpoint implementation
+   - Payment intent handling
+   - EU VAT compliance setup
+   - Testing with Stripe CLI
+   - Next steps link to prompt 07
+
+7. **prompts/07-testing.md** (550+ words)
+   - Context: Testing strategy overview
+   - Jest/Vitest setup guide
+   - Unit test examples for utilities
+   - Integration test for API routes
+   - Component testing with React Testing Library
+   - E2E test setup with Playwright
+   - Coverage requirements
+   - Next steps link to prompt 08
+
+8. **prompts/08-security.md** (550+ words)
+   - Context: Security checklist
+   - Input validation implementation
+   - XSS prevention examples
+   - CSRF token setup
+   - Rate limiting with Upstash
+   - Security headers configuration
+   - Penetration testing guide
+   - Next steps link to prompt 09
+
+9. **prompts/09-deploy.md** (600+ words)
+   - Context: Deployment architecture
+   - Vercel project setup
+   - Environment variables configuration
+   - Database migration in production
+   - Domain setup and SSL
+   - Performance monitoring setup
+   - Rollback procedures
+   - Post-deployment checklist
+   - Maintenance and monitoring
+
+Format each file EXACTLY as:
+## File: prompts/##-name.md
+\`\`\`markdown
+[COMPLETE prompt content with ALL code examples]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**REMINDER: Write COMPLETE prompts. Include ALL code examples and commands.**`
+
+    const prompts2Call = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: prompts2Prompt }]
+    })
+
+    const prompts2StopReason = prompts2Call.stop_reason
+    console.log('[CALL-CLAUDE-PARTS] Call 4/4 completed:', {
+      stopReason: prompts2StopReason,
+      inputTokens: prompts2Call.usage?.input_tokens,
+      outputTokens: prompts2Call.usage?.output_tokens
+    })
+
+    if (prompts2StopReason === 'max_tokens') {
+      console.warn('[CALL-CLAUDE-PARTS] WARNING: Call 4/4 hit max_tokens - files may be incomplete')
+    }
+
+    // Parse and combine all 4 calls
+    console.log('[CALL-CLAUDE-PARTS] Parsing all responses...')
+    const docsParsed = parseClaudeOutput(docsCall.content)
+    const modulesParsed = parseClaudeOutput(modulesCall.content)
+    const prompts1Parsed = parseClaudeOutput(prompts1Call.content)
+    const prompts2Parsed = parseClaudeOutput(prompts2Call.content)
+
+    // Combine all parsed results
+    const combinedFiles = {
+      readme: docsParsed.readme,
+      claude: docsParsed.claude,
+      userInstructions: docsParsed.userInstructions,
+      quickStart: docsParsed.quickStart || '',
+      modules: {
+        ...modulesParsed.modules
+      },
+      prompts: {
+        ...prompts1Parsed.prompts,
+        ...prompts2Parsed.prompts
+      }
+    }
+
+    // Validate completeness
+    const totalFiles = 1 + 1 + 1 + 1 + Object.keys(combinedFiles.modules).length + Object.keys(combinedFiles.prompts).length
+    const expectedFiles = 4 + 8 + 9 // 4 core docs, 8 modules, 9 prompts = 21 total
+
+    console.log('[CALL-CLAUDE-PARTS] File generation summary:', {
+      hasReadme: !!combinedFiles.readme,
+      hasClaude: !!combinedFiles.claude,
+      hasUserInstructions: !!combinedFiles.userInstructions,
+      hasQuickStart: !!combinedFiles.quickStart,
+      moduleCount: Object.keys(combinedFiles.modules).length,
+      moduleNames: Object.keys(combinedFiles.modules).sort(),
+      promptCount: Object.keys(combinedFiles.prompts).length,
+      promptNames: Object.keys(combinedFiles.prompts).sort(),
+      totalFilesGenerated: totalFiles,
+      expectedFiles: expectedFiles,
+      completeness: `${Math.round((totalFiles / expectedFiles) * 100)}%`
+    })
+
+    // Warn about missing files
+    const expectedModules = ['auth', 'api', 'database', 'ui', 'payments', 'deployment', 'testing', 'security']
+    const missingModules = expectedModules.filter(m => !combinedFiles.modules[m])
+    if (missingModules.length > 0) {
+      console.warn('[CALL-CLAUDE-PARTS] Missing modules:', missingModules)
+    }
+
+    const expectedPrompts = ['01-setup-project', '02-setup-database', '03-setup-auth', '04-create-api', '05-create-ui', '06-integrate-payments', '07-testing', '08-security', '09-deploy']
+    const missingPrompts = expectedPrompts.filter(p => !combinedFiles.prompts[p])
+    if (missingPrompts.length > 0) {
+      console.warn('[CALL-CLAUDE-PARTS] Missing prompts:', missingPrompts)
+    }
+
+    // Check for truncated files (less than 300 chars is likely incomplete)
+    const shortFiles: string[] = []
+    if (combinedFiles.readme && combinedFiles.readme.length < 300) shortFiles.push('README.md')
+    if (combinedFiles.claude && combinedFiles.claude.length < 300) shortFiles.push('CLAUDE.md')
+    if (combinedFiles.userInstructions && combinedFiles.userInstructions.length < 300) shortFiles.push('USER_INSTRUCTIONS.md')
+
+    Object.entries(combinedFiles.modules).forEach(([name, content]) => {
+      if (content.length < 200) shortFiles.push(`modules/${name}/README.md`)
+    })
+
+    Object.entries(combinedFiles.prompts).forEach(([name, content]) => {
+      if (content.length < 200) shortFiles.push(`prompts/${name}.md`)
+    })
+
+    if (shortFiles.length > 0) {
+      console.warn('[CALL-CLAUDE-PARTS] Potentially incomplete files (< 300 chars):', shortFiles)
+    }
+
+    return combinedFiles
+  } catch (error) {
+    console.error('[CALL-CLAUDE-PARTS] Error:', error)
+    throw error
+  }
+}
+
+// Claude call function for export file generation (legacy - single call)
 async function callClaudeForExport(buildingPlan: string) {
   console.log('[CALL-CLAUDE] Starting Claude call for export generation')
 
@@ -430,6 +928,7 @@ function parseClaudeOutput(content: any) {
     readme: '',
     claude: '',
     userInstructions: '',
+    quickStart: '',
     modules: {} as Record<string, string>,
     prompts: {} as Record<string, string>
   }
@@ -445,7 +944,7 @@ function parseClaudeOutput(content: any) {
     const filePath = match[1].trim()
     const fileContent = match[2]
 
-    console.log(`[PARSE-CLAUDE] Parsing file: ${filePath}`)
+    console.log(`[PARSE-CLAUDE] Parsing file: ${filePath} (${fileContent.length} chars)`)
     parsedFiles.push(filePath)
 
     // Handle top-level files
@@ -455,11 +954,22 @@ function parseClaudeOutput(content: any) {
       files.claude = fileContent
     } else if (filePath === 'USER_INSTRUCTIONS.md' || filePath.endsWith('/USER_INSTRUCTIONS.md')) {
       files.userInstructions = fileContent
+    } else if (filePath === 'QUICK_START.md' || filePath.endsWith('/QUICK_START.md')) {
+      files.quickStart = fileContent
     }
-    // Handle module files (must contain 'modules/' in path)
+    // Handle module files with nested structure (e.g., modules/auth/README.md)
     else if (filePath.includes('modules/')) {
-      const moduleName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'module'
-      files.modules[moduleName] = fileContent
+      // Extract module name from path like "modules/auth/README.md" -> "auth"
+      const pathParts = filePath.split('/')
+      const moduleIndex = pathParts.indexOf('modules')
+      if (moduleIndex >= 0 && pathParts.length > moduleIndex + 1) {
+        const moduleName = pathParts[moduleIndex + 1]
+        files.modules[moduleName] = fileContent
+      } else {
+        // Fallback for old format "modules/auth-module.md"
+        const moduleName = filePath.split('/').pop()?.replace(/(-module)?\.(md|MD)$/, '') || 'module'
+        files.modules[moduleName] = fileContent
+      }
     }
     // Handle prompt files (must contain 'prompts/' in path OR start with number)
     else if (filePath.includes('prompts/') || /^\d{2}-/.test(filePath.split('/').pop() || '')) {
@@ -472,25 +982,30 @@ function parseClaudeOutput(content: any) {
     hasReadme: !!files.readme,
     hasClaude: !!files.claude,
     hasUserInstructions: !!files.userInstructions,
+    hasQuickStart: !!files.quickStart,
     moduleCount: Object.keys(files.modules).length,
     promptCount: Object.keys(files.prompts).length,
     allParsedFiles: parsedFiles
   })
 
-  // Validation warnings for expected files
-  const expectedModules = ['auth-module', 'api-module', 'database-module', 'ui-module', 'payments-module']
+  // Validation warnings for expected files (updated for new structure)
+  const expectedModules = ['auth', 'api', 'database', 'ui', 'payments', 'deployment', 'testing', 'security']
   const missingModules = expectedModules.filter(m => !files.modules[m])
   if (missingModules.length > 0) {
     console.warn('[PARSE-CLAUDE] Missing expected modules:', missingModules)
   }
 
-  const expectedPromptCount = 7 // 01-setup through 07-deploy
+  const expectedPromptCount = 9 // 01-setup through 09-deploy
   if (Object.keys(files.prompts).length < expectedPromptCount) {
     console.warn(`[PARSE-CLAUDE] Expected ${expectedPromptCount} prompts, found ${Object.keys(files.prompts).length}`)
   }
 
   if (!files.userInstructions) {
     console.warn('[PARSE-CLAUDE] Missing USER_INSTRUCTIONS.md')
+  }
+
+  if (!files.quickStart) {
+    console.warn('[PARSE-CLAUDE] Missing QUICK_START.md')
   }
 
   // If no files were parsed, try to extract at least README from full text
