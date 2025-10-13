@@ -29,8 +29,22 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [planId, setPlanId] = useState<string | null>(null)
 
   useEffect(() => {
-    generatePlan()
+    checkAuthAndGenerate()
   }, [params.id])
+
+  async function checkAuthAndGenerate() {
+    // Check authentication first
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      console.log('[PREVIEW-PLAN] User not authenticated, redirecting to login')
+      router.push('/auth/sign-in')
+      return
+    }
+
+    console.log('[PREVIEW-PLAN] User authenticated:', user.id)
+    generatePlan()
+  }
 
   async function generatePlan() {
     try {
@@ -150,124 +164,38 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center overflow-hidden relative cursor-wait">
-        {/* Animated Background Orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
-          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
-        </div>
-
-        {/* Main Loading Content */}
-        <div className="relative z-10 text-center px-4">
-          {/* Animated Robot/AI Icon */}
-          <div className="mb-8 relative">
-            <div className="inline-block relative">
-              {/* Rotating outer ring */}
-              <div className="absolute inset-0 rounded-full border-4 border-blue-200 animate-spin" style={{animationDuration: '3s'}}></div>
-              <div className="absolute inset-2 rounded-full border-4 border-purple-200 animate-spin" style={{animationDuration: '2s', animationDirection: 'reverse'}}></div>
-              <div className="absolute inset-4 rounded-full border-4 border-pink-200 animate-spin" style={{animationDuration: '1.5s'}}></div>
-
-              {/* Center emoji with pulse */}
-              <div className="relative bg-white rounded-full p-8 shadow-2xl animate-pulse-slow">
-                <span className="text-6xl">🤖</span>
-              </div>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          {/* Simple spinner */}
+          <div className="mb-6 relative inline-block">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
 
-          {/* Animated Title */}
-          <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 animate-gradient">
-            Architecting Your SaaS Blueprint
+          {/* Title */}
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            Generating Your Building Plan
           </h2>
 
-          {/* Fun Status Messages */}
-          <div className="space-y-2 mb-8">
-            <p className="text-lg text-gray-700 font-medium animate-fade-in">
-              🧠 GPT-4 is thinking really hard...
-            </p>
-            <p className="text-md text-gray-600 animate-fade-in animation-delay-1000">
-              ✨ Synthesizing knowledge base patterns
-            </p>
-            <p className="text-md text-gray-600 animate-fade-in animation-delay-2000">
-              🏗️ Applying SaaS architecture best practices
-            </p>
-            <p className="text-md text-gray-600 animate-fade-in animation-delay-3000">
-              💎 Crafting your comprehensive plan
-            </p>
+          {/* Status Messages */}
+          <div className="space-y-2 mb-6 text-gray-600">
+            <p>🧠 GPT-4 is analyzing your answers...</p>
+            <p className="text-sm">✨ Synthesizing with knowledge base patterns</p>
           </div>
 
           {/* Progress Bar */}
-          <div className="max-w-md mx-auto">
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-              <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-progress"></div>
-            </div>
-            <p className="text-sm text-gray-500 mt-2 italic">This usually takes 10-20 seconds...</p>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-progress"></div>
           </div>
-
-          {/* Floating Emoji Animation */}
-          <div className="mt-8 flex justify-center gap-4 text-4xl">
-            <span className="animate-bounce" style={{animationDelay: '0s'}}>📊</span>
-            <span className="animate-bounce" style={{animationDelay: '0.1s'}}>💡</span>
-            <span className="animate-bounce" style={{animationDelay: '0.2s'}}>🚀</span>
-            <span className="animate-bounce" style={{animationDelay: '0.3s'}}>⚡</span>
-          </div>
+          <p className="text-sm text-gray-500">This usually takes 10-20 seconds...</p>
         </div>
 
-        {/* Custom Cursor Effect Styles */}
         <style jsx>{`
-          @keyframes blob {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(20px, -50px) scale(1.1); }
-            50% { transform: translate(-20px, 20px) scale(0.9); }
-            75% { transform: translate(50px, 50px) scale(1.05); }
-          }
-          @keyframes gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-          }
           @keyframes progress {
             0% { width: 0%; }
-            50% { width: 70%; }
             100% { width: 95%; }
-          }
-          @keyframes pulse-slow {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-          }
-          @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .animate-blob {
-            animation: blob 7s infinite;
-          }
-          .animation-delay-2000 {
-            animation-delay: 2s;
-          }
-          .animation-delay-4000 {
-            animation-delay: 4s;
-          }
-          .animation-delay-1000 {
-            animation-delay: 1s;
-          }
-          .animation-delay-2000 {
-            animation-delay: 2s;
-          }
-          .animation-delay-3000 {
-            animation-delay: 3s;
-          }
-          .animate-gradient {
-            background-size: 200% 200%;
-            animation: gradient 3s ease infinite;
           }
           .animate-progress {
             animation: progress 15s ease-out forwards;
-          }
-          .animate-pulse-slow {
-            animation: pulse-slow 2s ease-in-out infinite;
-          }
-          .animate-fade-in {
-            animation: fade-in 0.5s ease-out forwards;
           }
         `}</style>
       </div>

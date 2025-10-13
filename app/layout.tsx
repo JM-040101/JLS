@@ -9,7 +9,11 @@ export const metadata = {
   description: 'Transform SaaS ideas into comprehensive 12-phase blueprints with exportable documentation and Claude Code prompts.',
   keywords: ['SaaS', 'Blueprint', 'Generator', 'AI', 'Claude', 'Workflow'],
   authors: [{ name: 'SaaS Blueprint Generator' }],
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
