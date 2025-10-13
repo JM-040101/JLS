@@ -5,8 +5,8 @@ import OpenAI from 'openai'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// Allow up to 60 seconds for job processing (max on Vercel hobby plan)
-export const maxDuration = 60
+// Allow up to 300 seconds for job processing (Vercel Pro plan)
+export const maxDuration = 300
 
 // POST /api/jobs/process/[job_id] - Process the job (called internally by frontend immediately after job creation)
 export async function POST(
