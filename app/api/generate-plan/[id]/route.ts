@@ -233,6 +233,7 @@ async function callGPT(answers: Array<{ phase_number: number; answer_text: strin
     console.log('[CALL-GPT] Calling OpenAI API...')
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo",
+      timeout: 50000, // 50 second timeout for the API call
       messages: [
         {
           role: "system",
