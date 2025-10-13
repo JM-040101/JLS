@@ -1,13 +1,11 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { inngest } from '@/lib/inngest/client'
 import JSZip from 'jszip'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
-// Increase timeout for Claude file generation (max 60s on Vercel hobby plan)
-export const maxDuration = 60
+// This endpoint just triggers Inngest - no timeout needed!
+export const maxDuration = 30
 
 // GET /api/export/[id]
 export async function GET(
@@ -32,6 +30,8 @@ async function handleExport(sessionId: string) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 })
     }
 
+    console.log('[EXPORT] Starting export for session:', sessionId)
+
     // 3. Check rate limiting (5 exports per day)
     const { count } = await supabase
       .from('exports')
@@ -54,7 +54,7 @@ async function handleExport(sessionId: string) {
       .single()
 
     if (planError || !plan) {
-      console.error('Error fetching plan:', planError)
+      console.error('[EXPORT] Error fetching plan:', planError)
       return NextResponse.json({ error: 'Plan not found. Please generate and approve a plan first.' }, { status: 404 })
     }
 
@@ -65,138 +65,106 @@ async function handleExport(sessionId: string) {
       )
     }
 
-    // Use edited content if available, otherwise use original content
-    const buildingPlan = plan.edited_content || plan.content
+    // 5. Check if there's already a completed export for this session
+    const { data: existingExport } = await supabase
+      .from('exports')
+      .select('id, status, files')
+      .eq('session_id', sessionId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
-    console.log('Using approved building plan for export...')
+    if (existingExport && existingExport.files) {
+      console.log('[EXPORT] Using existing completed export:', existingExport.id)
+      const zipBuffer = await createZip(existingExport.files)
 
-    // 5. Call Claude to transform plan into files
-    console.log('Calling Claude to generate export files...')
-    const files = await callClaude(buildingPlan)
-
-    if (!files.readme && !files.claude) {
-      return NextResponse.json({ error: 'Failed to generate export files' }, { status: 500 })
+      return new Response(new Uint8Array(zipBuffer), {
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
+        }
+      })
     }
 
-    // 7. Create ZIP file
-    console.log('Creating ZIP file...')
-    const zipBuffer = await createZip(files)
+    // 6. Create a new export record and trigger Inngest
+    console.log('[EXPORT] Creating new export record...')
+    const { data: newExport, error: exportError } = await supabase
+      .from('exports')
+      .insert({
+        user_id: user.id,
+        session_id: sessionId,
+        status: 'pending'
+      })
+      .select('id')
+      .single()
 
-    // 8. Track export in database
-    await supabase.from('exports').insert({
-      user_id: user.id,
-      session_id: sessionId
-    })
+    if (exportError || !newExport) {
+      console.error('[EXPORT] Error creating export:', exportError)
+      return NextResponse.json({ error: 'Failed to create export' }, { status: 500 })
+    }
 
-    // 9. Return ZIP file
-    return new Response(new Uint8Array(zipBuffer), {
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
+    // 7. Trigger Inngest function (no timeout limits!)
+    console.log('[EXPORT] Triggering Inngest function for export:', newExport.id)
+    await inngest.send({
+      name: 'export/generate.requested',
+      data: {
+        exportId: newExport.id,
+        sessionId: sessionId,
+        userId: user.id,
+        planId: plan.id
       }
     })
 
+    // 8. Poll for completion (max 25 seconds)
+    console.log('[EXPORT] Waiting for Inngest to complete...')
+    const startTime = Date.now()
+    const maxWaitTime = 25000 // 25 seconds
+
+    while (Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
+
+      const { data: exportStatus } = await supabase
+        .from('exports')
+        .select('status, files, error_message')
+        .eq('id', newExport.id)
+        .single()
+
+      if (exportStatus?.status === 'completed' && exportStatus.files) {
+        console.log('[EXPORT] Export completed successfully!')
+        const zipBuffer = await createZip(exportStatus.files)
+
+        return new Response(new Uint8Array(zipBuffer), {
+          headers: {
+            'Content-Type': 'application/zip',
+            'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
+          }
+        })
+      }
+
+      if (exportStatus?.status === 'failed') {
+        console.error('[EXPORT] Export failed:', exportStatus.error_message)
+        return NextResponse.json({
+          error: exportStatus.error_message || 'Export generation failed'
+        }, { status: 500 })
+      }
+    }
+
+    // If we get here, the export is still processing
+    console.log('[EXPORT] Export still processing after 25 seconds, returning status')
+    return NextResponse.json({
+      message: 'Export is being generated. This may take a few minutes. Please try downloading again in a moment.',
+      exportId: newExport.id,
+      status: 'processing'
+    }, { status: 202 })
+
   } catch (error) {
-    console.error('Export error:', error)
+    console.error('[EXPORT] Unexpected error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Export failed. Please try again.' },
       { status: 500 }
     )
   }
-}
-
-async function callClaude(buildingPlan: string) {
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY
-  })
-
-  // Load Claude instructions
-  const instructions = readFileSync(
-    join(process.cwd(), 'claude-instructions/claude-instructions.md'),
-    'utf-8'
-  )
-  const kb1 = readFileSync(
-    join(process.cwd(), 'claude-instructions/claude-knowledge-base-1.md'),
-    'utf-8'
-  )
-  const kb2 = readFileSync(
-    join(process.cwd(), 'claude-instructions/claude-knowledge-base-2.md'),
-    'utf-8'
-  )
-
-  const fullInstructions = `${instructions}\n\n---\n\n# Knowledge Base 1\n\n${kb1}\n\n---\n\n# Knowledge Base 2\n\n${kb2}`
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8000,
-    system: fullInstructions,
-    messages: [
-      {
-        role: "user",
-        content: `Transform this building plan into a complete project export with README.md, CLAUDE.md, module files, and prompt files. Follow your instructions exactly.
-
-IMPORTANT: Format each file exactly as:
-## File: filename.md
-\`\`\`markdown
-[file content here]
-\`\`\`
-
-# Building Plan
-
-${buildingPlan}`
-      }
-    ]
-  })
-
-  return parseClaudeOutput(message.content)
-}
-
-function parseClaudeOutput(content: any) {
-  // Extract text from Claude response
-  const text = typeof content === 'string' ? content : content[0]?.text || ''
-
-  const files = {
-    readme: '',
-    claude: '',
-    modules: {} as Record<string, string>,
-    prompts: {} as Record<string, string>
-  }
-
-  // Parse files from Claude output
-  // Format: ## File: path/to/file.md
-  const fileMatches = text.matchAll(/## File: (.+?)\n```(?:markdown)?\n([\s\S]+?)\n```/g)
-
-  let matchCount = 0
-  for (const match of fileMatches) {
-    matchCount++
-    const filePath = match[1].trim()
-    const fileContent = match[2]
-
-    console.log(`Parsing file: ${filePath}`)
-
-    if (filePath === 'README.md' || filePath.endsWith('/README.md')) {
-      files.readme = fileContent
-    } else if (filePath === 'CLAUDE.md' || filePath.endsWith('/CLAUDE.md')) {
-      files.claude = fileContent
-    } else if (filePath.includes('modules/') || filePath.includes('Claude-')) {
-      const moduleName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'module'
-      files.modules[moduleName] = fileContent
-    } else if (filePath.includes('prompts/')) {
-      const promptName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'prompt'
-      files.prompts[promptName] = fileContent
-    }
-  }
-
-  console.log(`Parsed ${matchCount} files: ${files.readme ? 'README' : ''} ${files.claude ? 'CLAUDE' : ''} modules=${Object.keys(files.modules).length} prompts=${Object.keys(files.prompts).length}`)
-
-  // If no files were parsed, try to extract at least README and CLAUDE from full text
-  if (matchCount === 0) {
-    console.warn('No files parsed in expected format. Extracting from full text...')
-    files.readme = text.substring(0, Math.min(5000, text.length))
-    files.claude = 'See README.md for full content.'
-  }
-
-  return files
 }
 
 async function createZip(files: {

@@ -1,6 +1,7 @@
 import { inngest } from './client'
 import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -252,4 +253,223 @@ Now generate the complete building plan using the structured format provided in 
     console.error('[CALL-GPT] Error calling GPT-4:', error)
     throw error
   }
+}
+
+// Inngest function to generate export files (no timeout limits!)
+export const generateExportFunction = inngest.createFunction(
+  { id: 'generate-export' },
+  { event: 'export/generate.requested' },
+  async ({ event, step }) => {
+    const { exportId, sessionId, userId, planId } = event.data
+
+    console.log('[INNGEST-EXPORT] Starting export generation for session:', sessionId)
+
+    // Initialize Supabase with service role key
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    try {
+      // Step 1: Update export status to processing
+      await step.run('update-export-to-processing', async () => {
+        console.log('[INNGEST-EXPORT] Updating export status to processing')
+        await supabase
+          .from('exports')
+          .update({
+            status: 'processing',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+      })
+
+      // Step 2: Fetch approved plan
+      const plan = await step.run('fetch-plan', async () => {
+        console.log('[INNGEST-EXPORT] Fetching plan:', planId)
+        const { data, error } = await supabase
+          .from('plans')
+          .select('content, edited_content, status')
+          .eq('id', planId)
+          .single()
+
+        if (error || !data) {
+          throw new Error(`Failed to fetch plan: ${error?.message}`)
+        }
+
+        if (data.status !== 'approved') {
+          throw new Error('Plan must be approved before export')
+        }
+
+        return data.edited_content || data.content
+      })
+
+      // Step 3: Call Claude to generate export files (no timeout!)
+      const files = await step.run('call-claude', async () => {
+        console.log('[INNGEST-EXPORT] Calling Claude to generate files...')
+        const exportFiles = await callClaudeForExport(plan)
+        console.log('[INNGEST-EXPORT] Claude generated files:', {
+          hasReadme: !!exportFiles.readme,
+          hasClaude: !!exportFiles.claude,
+          moduleCount: Object.keys(exportFiles.modules).length,
+          promptCount: Object.keys(exportFiles.prompts).length
+        })
+        return exportFiles
+      })
+
+      // Step 4: Store files in database
+      await step.run('save-export-files', async () => {
+        console.log('[INNGEST-EXPORT] Saving export files to database')
+        await supabase
+          .from('exports')
+          .update({
+            status: 'completed',
+            files: files,
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+      })
+
+      console.log('[INNGEST-EXPORT] Export generation completed successfully!')
+      return { success: true, exportId, files }
+
+    } catch (error) {
+      console.error('[INNGEST-EXPORT] Error generating export:', error)
+
+      // Update export status to failed
+      await supabase
+        .from('exports')
+        .update({
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', exportId)
+
+      throw error
+    }
+  }
+)
+
+// Claude call function for export file generation
+async function callClaudeForExport(buildingPlan: string) {
+  console.log('[CALL-CLAUDE] Starting Claude call for export generation')
+
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('Anthropic API key not configured')
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    })
+
+    // Load Claude instructions
+    const instructions = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-instructions.md'),
+      'utf-8'
+    )
+    const kb1 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-1.md'),
+      'utf-8'
+    )
+    const kb2 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-2.md'),
+      'utf-8'
+    )
+
+    const fullInstructions = `${instructions}\n\n---\n\n# Knowledge Base 1\n\n${kb1}\n\n---\n\n# Knowledge Base 2\n\n${kb2}`
+
+    console.log('[CALL-CLAUDE] Calling Anthropic API...')
+    const startTime = Date.now()
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8000,
+      system: fullInstructions,
+      messages: [
+        {
+          role: "user",
+          content: `Transform this building plan into a complete project export with README.md, CLAUDE.md, module files, and prompt files. Follow your instructions exactly.
+
+IMPORTANT: Format each file exactly as:
+## File: filename.md
+\`\`\`markdown
+[file content here]
+\`\`\`
+
+# Building Plan
+
+${buildingPlan}`
+        }
+      ]
+    })
+
+    const endTime = Date.now()
+    const durationSeconds = ((endTime - startTime) / 1000).toFixed(2)
+
+    console.log('[CALL-CLAUDE] Claude response received:', {
+      model: message.model,
+      stopReason: message.stop_reason,
+      durationSeconds
+    })
+
+    const content = message.content
+    return parseClaudeOutput(content)
+  } catch (error) {
+    console.error('[CALL-CLAUDE] Error calling Claude:', error)
+    throw error
+  }
+}
+
+function parseClaudeOutput(content: any) {
+  // Extract text from Claude response
+  const text = typeof content === 'string' ? content : content[0]?.text || ''
+
+  const files = {
+    readme: '',
+    claude: '',
+    modules: {} as Record<string, string>,
+    prompts: {} as Record<string, string>
+  }
+
+  // Parse files from Claude output
+  const fileMatches = text.matchAll(/## File: (.+?)\n```(?:markdown)?\n([\s\S]+?)\n```/g)
+
+  let matchCount = 0
+  for (const match of fileMatches) {
+    matchCount++
+    const filePath = match[1].trim()
+    const fileContent = match[2]
+
+    console.log(`[PARSE-CLAUDE] Parsing file: ${filePath}`)
+
+    if (filePath === 'README.md' || filePath.endsWith('/README.md')) {
+      files.readme = fileContent
+    } else if (filePath === 'CLAUDE.md' || filePath.endsWith('/CLAUDE.md')) {
+      files.claude = fileContent
+    } else if (filePath.includes('modules/') || filePath.includes('Claude-')) {
+      const moduleName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'module'
+      files.modules[moduleName] = fileContent
+    } else if (filePath.includes('prompts/')) {
+      const promptName = filePath.split('/').pop()?.replace(/\.(md|MD)$/, '') || 'prompt'
+      files.prompts[promptName] = fileContent
+    }
+  }
+
+  console.log(`[PARSE-CLAUDE] Parsed ${matchCount} files:`, {
+    hasReadme: !!files.readme,
+    hasClaude: !!files.claude,
+    moduleCount: Object.keys(files.modules).length,
+    promptCount: Object.keys(files.prompts).length
+  })
+
+  // If no files were parsed, try to extract at least README from full text
+  if (matchCount === 0) {
+    console.warn('[PARSE-CLAUDE] No files parsed in expected format. Using fallback...')
+    files.readme = text.substring(0, Math.min(5000, text.length))
+    files.claude = 'See README.md for full content.'
+  }
+
+  return files
 }
