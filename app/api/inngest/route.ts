@@ -9,4 +9,5 @@ export const { GET, POST, PUT } = serve({
     generatePlanFunction,
     generateExportFunction
   ],
+  signingKey: process.env.INNGEST_SIGNING_KEY,
 })
