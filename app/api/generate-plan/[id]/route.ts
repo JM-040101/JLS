@@ -196,6 +196,12 @@ async function callGPT(answers: Array<{ phase_number: number; answer_text: strin
   console.log('[CALL-GPT] Starting GPT-4 call with', answers.length, 'answers')
 
   try {
+    // Verify API key exists
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('[CALL-GPT] OpenAI API key not configured')
+      throw new Error('OpenAI API key not configured. Please contact support.')
+    }
+
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     })
@@ -231,6 +237,8 @@ async function callGPT(answers: Array<{ phase_number: number; answer_text: strin
     console.log('[CALL-GPT] Formatted answers length:', formattedAnswers.length)
 
     console.log('[CALL-GPT] Calling OpenAI API...')
+    const startTime = Date.now()
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo",
       messages: [
@@ -817,15 +825,42 @@ Now generate the complete building plan using the structured format provided in 
       temperature: 0.7
     })
 
+    const endTime = Date.now()
+    const durationSeconds = ((endTime - startTime) / 1000).toFixed(2)
+
     console.log('[CALL-GPT] GPT-4 response received:', {
       model: completion.model,
       finishReason: completion.choices[0].finish_reason,
-      tokensUsed: completion.usage
+      tokensUsed: completion.usage,
+      durationSeconds
     })
 
-    return completion.choices[0].message.content
+    const content = completion.choices[0].message.content
+
+    if (!content) {
+      console.error('[CALL-GPT] GPT-4 returned empty content')
+      throw new Error('GPT-4 returned empty response. Please try again.')
+    }
+
+    console.log('[CALL-GPT] GPT-4 response content length:', content.length)
+
+    return content
   } catch (error) {
     console.error('[CALL-GPT] Error calling GPT-4:', error)
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        throw new Error('GPT-4 request timed out. This plan may be too complex. Please try again.')
+      } else if (error.message.includes('rate_limit')) {
+        throw new Error('API rate limit reached. Please wait a moment and try again.')
+      } else if (error.message.includes('insufficient_quota')) {
+        throw new Error('API quota exceeded. Please contact support.')
+      } else if (error.message.includes('API key')) {
+        throw new Error('API configuration error. Please contact support.')
+      }
+    }
+
     throw error
   }
 }
