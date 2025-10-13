@@ -303,14 +303,15 @@ export const generateExportFunction = inngest.createFunction(
         return data.edited_content || data.content
       })
 
-      // Step 3: Call Claude in 3 parts with rate limiting (no timeout!)
-      const files = await step.run('call-claude-parts', async () => {
-        console.log('[INNGEST-EXPORT] Calling Claude to generate files (3-part split)...')
-        const exportFiles = await callClaudeForExportInParts(plan)
-        console.log('[INNGEST-EXPORT] Claude generated files:', {
+      // Step 3: Call hybrid models (GPT-4 + Claude in parallel, no timeout!)
+      const files = await step.run('call-hybrid-models', async () => {
+        console.log('[INNGEST-EXPORT] Calling hybrid models (GPT-4 + Claude) to generate files...')
+        const exportFiles = await callHybridForExportInParts(plan)
+        console.log('[INNGEST-EXPORT] Hybrid generation completed:', {
           hasReadme: !!exportFiles.readme,
           hasClaude: !!exportFiles.claude,
           hasUserInstructions: !!exportFiles.userInstructions,
+          hasQuickStart: !!exportFiles.quickStart,
           moduleCount: Object.keys(exportFiles.modules).length,
           promptCount: Object.keys(exportFiles.prompts).length
         })
@@ -351,6 +352,314 @@ export const generateExportFunction = inngest.createFunction(
     }
   }
 )
+
+// Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) in parallel
+async function callHybridForExportInParts(buildingPlan: string) {
+  console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 + Claude in parallel)')
+
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('Anthropic API key not configured')
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured')
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    })
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+
+    // Load knowledge bases
+    const kb1 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-1.md'),
+      'utf-8'
+    )
+    const kb2 = readFileSync(
+      join(process.cwd(), 'claude-instructions/claude-knowledge-base-2.md'),
+      'utf-8'
+    )
+
+    // Run GPT-4 and Claude calls in parallel
+    console.log('[CALL-HYBRID] Launching parallel calls...')
+    const startTime = Date.now()
+
+    const [gptModulesResult, gptPromptsResult, claudeDocsResult] = await Promise.all([
+      // GPT-4 Call 1: Generate 8 module READMEs (fast, structured)
+      (async () => {
+        console.log('[CALL-HYBRID-GPT] Generating 8 module READMEs...')
+        const modulesPrompt = `You are an expert software architect. Generate 8 COMPLETE, DETAILED module README files.
+
+**CRITICAL: Each module must be 500-800 words with ALL sections completed.**
+
+Generate EXACTLY these 8 files:
+
+1. **modules/auth/README.md** - Authentication strategy, user roles, session management, JWT/OAuth flows, security best practices, example middleware code
+2. **modules/api/README.md** - API architecture, endpoint list, request/response examples, rate limiting, error handling, validation schemas
+3. **modules/database/README.md** - Complete schema with SQL, multi-tenancy, RLS policies, migrations, indexing, query optimization
+4. **modules/ui/README.md** - Component hierarchy, design system tokens, routing, state management, responsive design, example code
+5. **modules/payments/README.md** - Stripe integration, subscription tiers, webhook handling, EU VAT compliance, payment flows, error recovery
+6. **modules/deployment/README.md** - Vercel deployment checklist, environment variables, CI/CD pipeline, domain config, monitoring, rollback
+7. **modules/testing/README.md** - Testing strategy, unit/integration/E2E test examples, coverage requirements, mocking strategies
+8. **modules/security/README.md** - Security checklist, input validation, XSS/CSRF prevention, SQL injection prevention, rate limiting
+
+Format each EXACTLY as:
+## File: modules/module-name/README.md
+\`\`\`markdown
+[COMPLETE content with code examples]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**Write COMPLETE modules with ALL code examples.**`
+
+        const modulesResponse = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [{ role: "user", content: modulesPrompt }],
+          max_tokens: 12000,
+          temperature: 0.7
+        })
+
+        console.log('[CALL-HYBRID-GPT] Modules completed:', {
+          finishReason: modulesResponse.choices[0].finish_reason,
+          tokensUsed: modulesResponse.usage
+        })
+
+        return modulesResponse.choices[0].message.content || ''
+      })(),
+
+      // GPT-4 Call 2: Generate 9 prompt files (fast, structured)
+      (async () => {
+        console.log('[CALL-HYBRID-GPT] Generating 9 implementation prompts...')
+        const promptsPrompt = `You are an expert developer coach. Generate 9 COMPLETE, ACTIONABLE implementation prompts. Each must be 400-650 words with DETAILED steps and code examples.
+
+Generate EXACTLY these 9 files:
+
+1. **prompts/01-setup-project.md** - Context, prerequisites, Next.js 14 setup, dependencies, folder structure, environment variables, success criteria, next steps
+2. **prompts/02-setup-database.md** - Context, Supabase setup, schema SQL, RLS policies, migrations, seeding, connection verification, next steps
+3. **prompts/03-setup-auth.md** - Context, auth flow diagram, Supabase Auth setup, middleware code, protected routes, session management, testing, next steps
+4. **prompts/04-create-api.md** - Context, API architecture, endpoint list, route handlers, input validation with Zod, error handling, rate limiting, testing, next steps
+5. **prompts/05-create-ui.md** - Context, component hierarchy, design system, core components, routing, state management, form handling, responsive testing, next steps
+6. **prompts/06-integrate-payments.md** - Context, payment flow, Stripe setup, API keys, subscription code, webhooks, payment intents, EU VAT, testing with Stripe CLI, next steps
+7. **prompts/07-testing.md** - Context, testing strategy, Jest/Vitest setup, unit tests, integration tests, component tests, E2E with Playwright, coverage, next steps
+8. **prompts/08-security.md** - Context, security checklist, input validation, XSS prevention, CSRF tokens, rate limiting with Upstash, security headers, penetration testing, next steps
+9. **prompts/09-deploy.md** - Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance
+
+Format each EXACTLY as:
+## File: prompts/##-name.md
+\`\`\`markdown
+[COMPLETE prompt with ALL code examples]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**Write COMPLETE prompts with ALL code examples and commands.**`
+
+        const promptsResponse = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [{ role: "user", content: promptsPrompt }],
+          max_tokens: 14000,
+          temperature: 0.7
+        })
+
+        console.log('[CALL-HYBRID-GPT] Prompts completed:', {
+          finishReason: promptsResponse.choices[0].finish_reason,
+          tokensUsed: promptsResponse.usage
+        })
+
+        return promptsResponse.choices[0].message.content || ''
+      })(),
+
+      // Claude Call: Generate 4 core documentation files (quality, narrative)
+      (async () => {
+        console.log('[CALL-HYBRID-CLAUDE] Generating 4 core documentation files...')
+        const docsPrompt = `You are an expert technical writer. Generate 4 COMPLETE, COMPREHENSIVE, POLISHED documentation files. These are the most important user-facing docs, so quality is critical.
+
+**CRITICAL INSTRUCTIONS:**
+- Each file must be 1000-2500 words with exceptional detail and clarity
+- Include ALL sections with complete paragraphs
+- Write in a clear, professional, engaging tone
+- Include practical examples and diagrams where helpful
+- End each file with clear next steps
+- DO NOT truncate or use placeholders
+
+Generate EXACTLY 4 files:
+
+1. **USER_INSTRUCTIONS.md** (2000+ words)
+   - Warm welcome explaining what they received
+   - Complete inventory of all files in the export
+   - How to navigate the documentation structure
+   - Detailed step-by-step guide to using Claude Code with CLAUDE.md
+   - How to use the numbered prompt files in sequence (01-09)
+   - Prerequisites and setup requirements
+   - Tips for customization and adaptation
+   - Troubleshooting common issues
+   - Where to get help and additional resources
+
+2. **README.md** (1500+ words)
+   - Compelling project name and tagline
+   - Detailed problem statement with context
+   - Target audience analysis with use cases
+   - Core features broken down by MVP/Growth/Enterprise phases
+   - Complete tech stack with rationale for each choice
+   - Architecture overview with ASCII diagram
+   - Getting started guide with prerequisites
+   - Project structure overview
+   - Development workflow
+   - Contributing guidelines
+   - License and credits
+
+3. **CLAUDE.md** (1200+ words)
+   - Comprehensive project overview
+   - Module structure with detailed links to each module README
+   - Development workflow and best practices
+   - Code standards and conventions
+   - Testing requirements and strategies
+   - Database schema with relationships diagram
+   - API endpoint documentation with examples
+   - Security requirements and implementation notes
+   - Performance considerations and optimization tips
+   - Deployment and monitoring guidance
+
+4. **QUICK_START.md** (800+ words)
+   - Prerequisites checklist
+   - 5-minute setup guide (step-by-step commands)
+   - Environment variables template with explanations
+   - Database setup and migration commands
+   - First-time run instructions
+   - Verification steps to confirm everything works
+   - Common first-run issues and fixes
+   - Next steps after successful setup
+
+Format each file EXACTLY as:
+## File: filename.md
+\`\`\`markdown
+[COMPLETE file content - exceptional quality]
+\`\`\`
+
+# Knowledge Base 1
+${kb1}
+
+# Knowledge Base 2
+${kb2}
+
+# Building Plan
+${buildingPlan}
+
+**REMINDER: These are the primary user-facing docs. Exceptional quality required.**`
+
+        const docsResponse = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 14000,
+          messages: [{ role: "user", content: docsPrompt }]
+        })
+
+        console.log('[CALL-HYBRID-CLAUDE] Docs completed:', {
+          stopReason: docsResponse.stop_reason,
+          tokensUsed: docsResponse.usage
+        })
+
+        if (docsResponse.stop_reason === 'max_tokens') {
+          console.warn('[CALL-HYBRID-CLAUDE] WARNING: Hit max_tokens - docs may be incomplete')
+        }
+
+        return docsResponse.content
+      })()
+    ])
+
+    const endTime = Date.now()
+    const totalDuration = ((endTime - startTime) / 1000).toFixed(2)
+    console.log(`[CALL-HYBRID] All parallel calls completed in ${totalDuration}s`)
+
+    // Parse all responses
+    console.log('[CALL-HYBRID] Parsing responses...')
+    const modulesParsed = parseClaudeOutput(gptModulesResult)
+    const promptsParsed = parseClaudeOutput(gptPromptsResult)
+    const docsParsed = parseClaudeOutput(claudeDocsResult)
+
+    // Combine results
+    const combinedFiles = {
+      readme: docsParsed.readme,
+      claude: docsParsed.claude,
+      userInstructions: docsParsed.userInstructions,
+      quickStart: docsParsed.quickStart || '',
+      modules: { ...modulesParsed.modules },
+      prompts: { ...promptsParsed.prompts }
+    }
+
+    // Validate completeness
+    const totalFiles = 4 + Object.keys(combinedFiles.modules).length + Object.keys(combinedFiles.prompts).length
+    const expectedFiles = 21 // 4 core docs + 8 modules + 9 prompts
+
+    console.log('[CALL-HYBRID] Generation summary:', {
+      hasReadme: !!combinedFiles.readme,
+      hasClaude: !!combinedFiles.claude,
+      hasUserInstructions: !!combinedFiles.userInstructions,
+      hasQuickStart: !!combinedFiles.quickStart,
+      moduleCount: Object.keys(combinedFiles.modules).length,
+      moduleNames: Object.keys(combinedFiles.modules).sort(),
+      promptCount: Object.keys(combinedFiles.prompts).length,
+      promptNames: Object.keys(combinedFiles.prompts).sort(),
+      totalFilesGenerated: totalFiles,
+      expectedFiles: expectedFiles,
+      completeness: `${Math.round((totalFiles / expectedFiles) * 100)}%`,
+      totalDurationSeconds: totalDuration
+    })
+
+    // Warn about missing files
+    const expectedModules = ['auth', 'api', 'database', 'ui', 'payments', 'deployment', 'testing', 'security']
+    const missingModules = expectedModules.filter(m => !combinedFiles.modules[m])
+    if (missingModules.length > 0) {
+      console.warn('[CALL-HYBRID] Missing modules:', missingModules)
+    }
+
+    const expectedPrompts = ['01-setup-project', '02-setup-database', '03-setup-auth', '04-create-api', '05-create-ui', '06-integrate-payments', '07-testing', '08-security', '09-deploy']
+    const missingPrompts = expectedPrompts.filter(p => !combinedFiles.prompts[p])
+    if (missingPrompts.length > 0) {
+      console.warn('[CALL-HYBRID] Missing prompts:', missingPrompts)
+    }
+
+    // Check for truncated files
+    const shortFiles: string[] = []
+    if (combinedFiles.readme && combinedFiles.readme.length < 300) shortFiles.push('README.md')
+    if (combinedFiles.claude && combinedFiles.claude.length < 300) shortFiles.push('CLAUDE.md')
+    if (combinedFiles.userInstructions && combinedFiles.userInstructions.length < 300) shortFiles.push('USER_INSTRUCTIONS.md')
+
+    Object.entries(combinedFiles.modules).forEach(([name, content]) => {
+      if (content.length < 200) shortFiles.push(`modules/${name}/README.md`)
+    })
+
+    Object.entries(combinedFiles.prompts).forEach(([name, content]) => {
+      if (content.length < 200) shortFiles.push(`prompts/${name}.md`)
+    })
+
+    if (shortFiles.length > 0) {
+      console.warn('[CALL-HYBRID] Potentially incomplete files (< 300 chars):', shortFiles)
+    }
+
+    return combinedFiles
+  } catch (error) {
+    console.error('[CALL-HYBRID] Error:', error)
+    throw error
+  }
+}
 
 // Claude call function for export file generation (split into 4 parts for completeness)
 async function callClaudeForExportInParts(buildingPlan: string) {

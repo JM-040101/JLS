@@ -120,7 +120,7 @@ async function handleExport(sessionId: string) {
     console.log('[EXPORT] Inngest event triggered successfully')
 
     return NextResponse.json({
-      message: 'Export generation started. This takes 20-25 minutes due to AI processing (4 comprehensive Claude calls with rate limit delays). Please check back in 25 minutes.',
+      message: 'Export generation started. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel). Please check back in 7 minutes.',
       status: 'processing',
       exportId: newExport.id
     }, { status: 202 })
