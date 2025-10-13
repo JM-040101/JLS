@@ -27,6 +27,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [isApproving, setIsApproving] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [exportInfo, setExportInfo] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
   const [planStatus, setPlanStatus] = useState<string>('generated')
 
@@ -285,7 +286,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         // Got a status message (still processing)
         const data = await response.json()
         console.log('[PREVIEW-PLAN] Export status:', data)
-        setError(data.message || 'Export is being generated. Please try again in a moment.')
+        setExportInfo(data.message || 'Export is being generated. Please try again in a moment.')
       }
     } catch (err) {
       console.error('[PREVIEW-PLAN] Export error:', err)
@@ -353,6 +354,35 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           >
             Back to Workflow
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (exportInfo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-blue-600 text-5xl mb-4">⏳</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Export Processing</h2>
+          <p className="text-gray-600 mb-6">{exportInfo}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setExportInfo(null)}
+              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                setExportInfo(null)
+                handleExport()
+              }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Check Status
+            </button>
+          </div>
         </div>
       </div>
     )
