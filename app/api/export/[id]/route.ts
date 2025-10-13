@@ -195,7 +195,7 @@ async function callClaudeForExport(buildingPlan: string) {
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 8000,
+      max_tokens: 16000,
       system: fullInstructions,
       messages: [
         {
