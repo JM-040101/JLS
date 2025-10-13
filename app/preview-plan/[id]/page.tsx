@@ -52,73 +52,106 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
       setIsGenerating(true)
       setError(null)
 
-      console.log('[PREVIEW-PLAN] Calling API:', `/api/generate-plan/${params.id}`)
+      // Step 1: Initiate job creation
+      console.log('[PREVIEW-PLAN] Calling API to create job:', `/api/generate-plan/${params.id}`)
       const response = await fetch(`/api/generate-plan/${params.id}`, {
         method: 'POST',
       })
 
-      console.log('[PREVIEW-PLAN] API response status:', response.status)
-      console.log('[PREVIEW-PLAN] API response content-type:', response.headers.get('content-type'))
-
       if (!response.ok) {
-        // Handle both JSON and plain text error responses
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json()
-          console.error('[PREVIEW-PLAN] API JSON error response:', data)
-          throw new Error(data.error || 'Failed to generate plan')
-        } else {
-          // Plain text error (likely from Vercel timeout or edge runtime)
-          const text = await response.text()
-          console.error('[PREVIEW-PLAN] API text error response:', text)
-          throw new Error(`API Error: ${text.substring(0, 200)}`)
-        }
+        const data = await response.json()
+        console.error('[PREVIEW-PLAN] Error creating job:', data)
+        throw new Error(data.error || 'Failed to start plan generation')
       }
 
-      // Parse successful response - also handle plain text fallback
-      const contentType = response.headers.get('content-type')
-      let data
+      const jobData = await response.json()
+      console.log('[PREVIEW-PLAN] Job created:', jobData)
 
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json()
-      } else {
-        // Fallback for unexpected plain text response
-        const text = await response.text()
-        console.error('[PREVIEW-PLAN] Unexpected plain text response:', text.substring(0, 200))
-        throw new Error('Received invalid response format from server. This may indicate a timeout.')
+      // If plan already exists (approved), return it directly
+      if (jobData.plan && jobData.planId) {
+        console.log('[PREVIEW-PLAN] Received existing plan directly')
+        setPlan(jobData.plan)
+        setEditedPlan(jobData.plan)
+        setPlanId(jobData.planId)
+        return
       }
-      console.log('[PREVIEW-PLAN] Plan received:', {
-        planLength: data.plan?.length || 0,
-        status: data.status,
-        planId: data.planId
+
+      // Step 2: Immediately trigger job processing
+      const jobId = jobData.jobId
+      console.log('[PREVIEW-PLAN] Triggering job processing:', jobId)
+
+      // Fire and forget - don't await this
+      fetch(`/api/jobs/process/${jobId}`, {
+        method: 'POST'
+      }).catch(err => {
+        console.error('[PREVIEW-PLAN] Error triggering job processor:', err)
       })
 
-      setPlan(data.plan)
-      setEditedPlan(data.plan)
-      setPlanId(data.planId)
-      console.log('[PREVIEW-PLAN] Plan state updated successfully')
+      // Step 3: Poll for job completion
+      console.log('[PREVIEW-PLAN] Starting to poll for job completion...')
+      await pollForJobCompletion(jobId)
+
     } catch (err) {
       console.error('[PREVIEW-PLAN] Error generating plan:', err)
-
-      // Provide user-friendly error messages with context
-      let errorMessage = 'Failed to generate plan'
-
-      if (err instanceof Error) {
-        if (err.message.includes('timeout') || err.message.includes('invalid response format')) {
-          errorMessage = '⏱️ Generation took too long. This can happen with complex plans. Please try again - it usually works on the second attempt.'
-        } else if (err.message.includes('API Error:')) {
-          errorMessage = `${err.message}\n\n💡 This may be a temporary server issue. Please try regenerating the plan.`
-        } else {
-          errorMessage = err.message
-        }
-      }
-
-      setError(errorMessage)
+      setError(err instanceof Error ? err.message : 'Failed to generate plan')
     } finally {
       setIsGenerating(false)
       setIsLoading(false)
-      console.log('[PREVIEW-PLAN] Generation complete')
     }
+  }
+
+  async function pollForJobCompletion(jobId: string) {
+    const maxAttempts = 60 // 60 attempts * 2 seconds = 2 minutes max
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      attempts++
+      console.log(`[PREVIEW-PLAN] Polling attempt ${attempts}/${maxAttempts}`)
+
+      try {
+        const response = await fetch(`/api/jobs/${jobId}`)
+
+        if (!response.ok) {
+          console.error('[PREVIEW-PLAN] Error fetching job status')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          continue
+        }
+
+        const jobStatus = await response.json()
+        console.log('[PREVIEW-PLAN] Job status:', jobStatus.status)
+
+        if (jobStatus.status === 'completed') {
+          console.log('[PREVIEW-PLAN] Job completed successfully!')
+
+          if (jobStatus.result && jobStatus.result.plan) {
+            setPlan(jobStatus.result.plan)
+            setEditedPlan(jobStatus.result.plan)
+            setPlanId(jobStatus.result.planId)
+            console.log('[PREVIEW-PLAN] Plan loaded from job result')
+          } else {
+            throw new Error('Job completed but no plan data returned')
+          }
+
+          return
+        }
+
+        if (jobStatus.status === 'failed') {
+          const errorMsg = jobStatus.error_message || 'Job failed without error message'
+          console.error('[PREVIEW-PLAN] Job failed:', errorMsg)
+          throw new Error(errorMsg)
+        }
+
+        // Still processing, wait 2 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+      } catch (err) {
+        console.error('[PREVIEW-PLAN] Error during polling:', err)
+        throw err
+      }
+    }
+
+    // Timeout after max attempts
+    throw new Error('Plan generation timed out. Please try again.')
   }
 
   async function savePlanEdits() {
