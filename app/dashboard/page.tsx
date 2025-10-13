@@ -203,10 +203,10 @@ export default async function DashboardPage() {
                       )}
                       {session.status === 'completed' && (
                         <Link
-                          href={`/export/${session.id}`}
+                          href={`/preview-plan/${session.id}`}
                           className="btn-secondary text-sm"
                         >
-                          Export
+                          View Plan
                         </Link>
                       )}
                     </div>

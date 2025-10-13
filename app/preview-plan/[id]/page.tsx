@@ -25,8 +25,10 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
+  const [planStatus, setPlanStatus] = useState<string>('generated')
 
   useEffect(() => {
     checkAuthAndGenerate()
@@ -56,6 +58,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
       setPlan(existingPlan.edited_content || existingPlan.content)
       setEditedPlan(existingPlan.edited_content || existingPlan.content)
       setPlanId(existingPlan.id)
+      setPlanStatus(existingPlan.status || 'generated')
       setIsLoading(false)
       return
     }
@@ -232,14 +235,63 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         throw updateError
       }
 
-      console.log('[PREVIEW-PLAN] Plan approved, redirecting to export...')
-      // Redirect to export page
-      router.push(`/export/${params.id}`)
+      console.log('[PREVIEW-PLAN] Plan approved successfully!')
+      setPlanStatus('approved')
     } catch (err) {
       console.error('[PREVIEW-PLAN] Failed to approve plan:', err)
       setError(err instanceof Error ? err.message : 'Failed to approve plan')
     } finally {
       setIsApproving(false)
+    }
+  }
+
+  async function handleExport() {
+    if (!planId) {
+      console.error('[PREVIEW-PLAN] No planId available for export')
+      return
+    }
+
+    try {
+      console.log('[PREVIEW-PLAN] Starting export for session:', params.id)
+      setIsExporting(true)
+      setError(null)
+
+      // Call the export API endpoint
+      const response = await fetch(`/api/export/${params.id}`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate export')
+      }
+
+      // Check if we got a ZIP file or a status message
+      const contentType = response.headers.get('content-type')
+
+      if (contentType === 'application/zip') {
+        // Download the ZIP file
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'saas-blueprint.zip'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        console.log('[PREVIEW-PLAN] Export downloaded successfully!')
+      } else {
+        // Got a status message (still processing)
+        const data = await response.json()
+        console.log('[PREVIEW-PLAN] Export status:', data)
+        setError(data.message || 'Export is being generated. Please try again in a moment.')
+      }
+    } catch (err) {
+      console.error('[PREVIEW-PLAN] Export error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to export plan')
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -415,38 +467,76 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
         {/* Action Buttons */}
         {!isEditing && (
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push(`/workflow/${params.id}`)}
-              className="flex-1 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
-            >
-              ← Back to Workflow
-            </button>
-            <button
-              onClick={generatePlan}
-              disabled={isGenerating}
-              className="flex-1 px-8 py-4 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? 'Regenerating...' : '🔄 Regenerate Plan'}
-            </button>
-            <button
-              onClick={approvePlan}
-              disabled={isApproving}
-              className="flex-1 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isApproving ? 'Approving...' : '✅ Approve & Generate Files'}
-            </button>
-          </div>
+          <>
+            {planStatus !== 'approved' ? (
+              <div className="flex gap-4">
+                <button
+                  onClick={() => router.push(`/workflow/${params.id}`)}
+                  className="flex-1 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  ← Back to Workflow
+                </button>
+                <button
+                  onClick={generatePlan}
+                  disabled={isGenerating}
+                  className="flex-1 px-8 py-4 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? 'Regenerating...' : '🔄 Regenerate Plan'}
+                </button>
+                <button
+                  onClick={approvePlan}
+                  disabled={isApproving}
+                  className="flex-1 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isApproving ? 'Approving...' : '✅ Approve Plan'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="flex-1 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  ← Back to Dashboard
+                </button>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="flex-1 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isExporting ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating Export...
+                    </span>
+                  ) : (
+                    '📦 Export Files'
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Info Box */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-900 mb-2">💡 What happens next?</h3>
-          <ul className="text-blue-800 space-y-2 text-sm">
-            <li>• <strong>Edit:</strong> Modify the plan to match your exact requirements</li>
-            <li>• <strong>Regenerate:</strong> Generate a fresh plan if you want a different approach</li>
-            <li>• <strong>Approve:</strong> Lock in this plan and have Claude generate your documentation files</li>
-          </ul>
+          {planStatus !== 'approved' ? (
+            <ul className="text-blue-800 space-y-2 text-sm">
+              <li>• <strong>Edit:</strong> Modify the plan to match your exact requirements</li>
+              <li>• <strong>Regenerate:</strong> Generate a fresh plan if you want a different approach</li>
+              <li>• <strong>Approve:</strong> Lock in this plan so you can export the documentation files</li>
+            </ul>
+          ) : (
+            <ul className="text-blue-800 space-y-2 text-sm">
+              <li>✅ <strong>Plan Approved!</strong> Your plan is ready for export</li>
+              <li>• <strong>Export Files:</strong> Click the Export button to generate README, Claude instructions, and prompt files</li>
+              <li>• <strong>Download:</strong> Files will be packaged as a ZIP and downloaded automatically</li>
+            </ul>
+          )}
         </div>
       </div>
     </div>
