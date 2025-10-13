@@ -5,6 +5,9 @@ import OpenAI from 'openai'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+// Increase timeout for GPT-4 plan generation (max 60s on Vercel hobby plan)
+export const maxDuration = 60
+
 // POST /api/generate-plan/[id]
 export async function POST(
   req: Request,

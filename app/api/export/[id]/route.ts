@@ -6,6 +6,9 @@ import JSZip from 'jszip'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+// Increase timeout for Claude file generation (max 60s on Vercel hobby plan)
+export const maxDuration = 60
+
 // GET /api/export/[id]
 export async function GET(
   req: Request,
