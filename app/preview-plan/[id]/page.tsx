@@ -1118,27 +1118,29 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
               {/* Edit Button */}
               <div className="px-8 py-6 border-t" style={{
-                backgroundColor: branding.colors.primary,
+                backgroundColor: branding.colors.background,
                 borderColor: branding.colors.divider
               }}>
                 <button
                   onClick={() => setIsEditing(true)}
                   className="px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: branding.colors.secondary,
-                    color: branding.colors.text,
-                    border: `1px solid ${branding.colors.divider}`,
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                    backgroundColor: branding.colors.secondaryLight,
+                    color: branding.colors.textHeading,
+                    border: `2px solid ${branding.colors.accent}`,
+                    boxShadow: `0 4px 12px -1px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.borderColor = branding.colors.accent
-                    e.currentTarget.style.boxShadow = `0 10px 15px -3px rgba(0, 0, 0, 0.5)`
+                    e.currentTarget.style.backgroundColor = branding.colors.accent
+                    e.currentTarget.style.color = branding.colors.background
+                    e.currentTarget.style.boxShadow = `0 10px 20px -3px rgba(0, 0, 0, 0.6), 0 0 25px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.transform = 'translateY(-3px)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
-                    e.currentTarget.style.borderColor = branding.colors.divider
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.color = branding.colors.textHeading
+                    e.currentTarget.style.boxShadow = `0 4px 12px -1px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
                   ✏️ Edit Plan
@@ -1236,17 +1238,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   onClick={() => router.push(`/workflow/${params.id}`)}
                   className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: branding.colors.secondary,
-                    color: branding.colors.text,
-                    border: `1px solid ${branding.colors.divider}`
+                    backgroundColor: branding.colors.secondaryLight,
+                    color: branding.colors.textHeading,
+                    border: `2px solid ${branding.colors.divider}`,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
                     e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
                     e.currentTarget.style.borderColor = branding.colors.divider
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}
                 >
                   ← Back to Workflow
@@ -1284,17 +1289,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   onClick={() => router.push('/dashboard')}
                   className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: branding.colors.secondary,
-                    color: branding.colors.text,
-                    border: `1px solid ${branding.colors.divider}`
+                    backgroundColor: branding.colors.secondaryLight,
+                    color: branding.colors.textHeading,
+                    border: `2px solid ${branding.colors.divider}`,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
                     e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
                     e.currentTarget.style.borderColor = branding.colors.divider
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}
                 >
                   ← Back to Dashboard
