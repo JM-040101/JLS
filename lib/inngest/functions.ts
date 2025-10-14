@@ -482,7 +482,7 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       .from('exports')
       .update({
         progress: 20,
-        progress_message: 'Generating 21 files with Claude Sonnet (2-3 min)...',
+        progress_message: 'Generating 21 files with Claude Sonnet (3-4 min)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -514,14 +514,14 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
     ]
 
-    // Generate modules in batches (8 at a time - Claude has better rate limits)
-    console.log('[CALL-HYBRID-SONNET] Generating 8 modules in batches of 8...')
+    // Generate modules in batches (4 at a time to respect rate limit acceleration)
+    console.log('[CALL-HYBRID-SONNET] Generating 8 modules in batches of 4...')
 
     await supabase
       .from('exports')
       .update({
         progress: 25,
-        progress_message: 'Generating 8 modules in one batch...',
+        progress_message: 'Generating 8 modules (4 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -532,8 +532,8 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
 
     const moduleResultsArray = await runInBatches(
       moduleSpecs,
-      8, // Batch size: 8 calls at a time (all modules in one batch)
-      10000, // Wait 10 seconds between batches
+      4, // Batch size: 4 calls at a time (respects acceleration limit)
+      30000, // Wait 30 seconds between batches (allows rate limit to recover)
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate
@@ -610,14 +610,14 @@ ${buildingPlan}
 
     console.log('[CALL-HYBRID-SONNET] All modules completed')
 
-    // Generate prompts in batches (9 at a time - Claude can handle it)
-    console.log('[CALL-HYBRID-SONNET] Generating 9 prompts in batches of 9...')
+    // Generate prompts in batches (5 at a time to respect rate limits)
+    console.log('[CALL-HYBRID-SONNET] Generating 9 prompts in batches of 5...')
 
     await supabase
       .from('exports')
       .update({
         progress: 45,
-        progress_message: 'Generating 9 prompts in one batch...',
+        progress_message: 'Generating 9 prompts (5 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -627,8 +627,8 @@ ${buildingPlan}
 
     const promptResultsArray = await runInBatches(
       promptSpecs,
-      9, // Batch size: 9 calls at a time (all prompts in one batch)
-      10000, // Wait 10 seconds between batches
+      5, // Batch size: 5 calls at a time (respects acceleration limit)
+      30000, // Wait 30 seconds between batches
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate
