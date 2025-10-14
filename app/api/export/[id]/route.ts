@@ -49,107 +49,47 @@ async function handleExport(sessionId: string) {
       }, { status: 400 })
     }
 
-    // 3. Check if there's already a completed export
+    // 3. Check if there's currently a processing export (avoid duplicates)
     const { data: existingExport } = await supabase
       .from('exports')
       .select('id, status, files, progress, progress_message, error_message, created_at')
       .eq('session_id', sessionId)
+      .eq('status', 'processing')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (existingExport) {
-      if (existingExport.status === 'completed' && existingExport.files) {
-        console.log('[EXPORT] Returning existing completed export:', existingExport.id)
-        console.log('[EXPORT] Files structure:', {
-          hasReadme: !!existingExport.files.readme,
-          hasClaude: !!existingExport.files.claude,
-          hasUserInstructions: !!existingExport.files.userInstructions,
-          hasQuickStart: !!existingExport.files.quickStart,
-          moduleCount: Object.keys(existingExport.files.modules || {}).length,
-          promptCount: Object.keys(existingExport.files.prompts || {}).length
-        })
+      // Check if export is stale (> 15 minutes old)
+      const createdAt = new Date(existingExport.created_at)
+      const now = new Date()
+      const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
 
-        try {
-          const zipBuffer = await createZip(existingExport.files)
-          console.log('[EXPORT] ZIP created successfully, size:', zipBuffer.byteLength, 'bytes')
-
-          return new Response(new Uint8Array(zipBuffer), {
-            headers: {
-              'Content-Type': 'application/zip',
-              'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
-            }
-          })
-        } catch (zipError) {
-          console.error('[EXPORT] Error creating ZIP:', zipError)
-          return NextResponse.json({
-            error: `Failed to create ZIP file: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`,
-            status: 'failed'
-          }, { status: 500 })
-        }
-      }
-
-      if (existingExport.status === 'processing') {
-        // Check if export is stale (> 15 minutes old)
-        const { data: exportWithTimestamp } = await supabase
+      if (ageMinutes > 15) {
+        // Export is stale (stuck), mark as failed and create new one
+        console.log('[EXPORT] Export is stale (', ageMinutes.toFixed(1), 'minutes old), marking as failed and creating new one')
+        await supabase
           .from('exports')
-          .select('created_at')
-          .eq('id', existingExport.id)
-          .single()
-
-        if (exportWithTimestamp) {
-          const createdAt = new Date(exportWithTimestamp.created_at)
-          const now = new Date()
-          const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
-
-          if (ageMinutes > 15) {
-            // Export is stale (stuck), mark as failed and create new one
-            console.log('[EXPORT] Export is stale (', ageMinutes.toFixed(1), 'minutes old), marking as failed and creating new one')
-            await supabase
-              .from('exports')
-              .update({
-                status: 'failed',
-                error_message: 'Export timed out after 15 minutes. Please try again.',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingExport.id)
-            // Will create a new export below
-          } else {
-            // Export is recent and actively processing
-            console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress, 'Age:', ageMinutes.toFixed(1), 'minutes')
-            return NextResponse.json({
-              message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel).',
-              status: 'processing',
-              exportId: existingExport.id,
-              progress: existingExport.progress || 0
-            }, { status: 202 })
-          }
-        }
-      }
-
-      if (existingExport.status === 'failed') {
-        // Check if failed export is recent (< 5 minutes)
-        const createdAt = new Date(existingExport.created_at)
-        const now = new Date()
-        const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
-
-        if (ageMinutes < 5) {
-          // Recent failure - show the error
-          console.log('[EXPORT] Recent export failed (', ageMinutes.toFixed(1), 'minutes ago):', existingExport.error_message)
-          return NextResponse.json({
-            error: existingExport.error_message || 'Export failed. Please try again.',
+          .update({
             status: 'failed',
-            exportId: existingExport.id
-          }, { status: 500 })
-        } else {
-          // Old failure - try again with new export
-          console.log('[EXPORT] Previous export failed', ageMinutes.toFixed(1), 'minutes ago, creating new one')
-          // Will create a new export below
-        }
+            error_message: 'Export timed out after 15 minutes. Please try again.',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingExport.id)
+        // Will create a new export below
+      } else {
+        // Export is recent and actively processing
+        console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress, 'Age:', ageMinutes.toFixed(1), 'minutes')
+        return NextResponse.json({
+          message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes with individual file generation for completeness.',
+          status: 'processing',
+          exportId: existingExport.id,
+          progress: existingExport.progress || 0
+        }, { status: 202 })
       }
     }
 
-    // 4. No completed export exists, trigger Inngest
+    // 4. Create new export record and trigger generation
     console.log('[EXPORT] Creating new export record and triggering Inngest...')
 
     const { data: newExport, error: exportError } = await supabase
@@ -183,7 +123,7 @@ async function handleExport(sessionId: string) {
     console.log('[EXPORT] Inngest event triggered successfully')
 
     return NextResponse.json({
-      message: 'Export generation started. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel). Please check back in 7 minutes.',
+      message: 'Export generation started. This takes 5-7 minutes with 18 individual AI calls for complete files. Please check back in 7 minutes.',
       status: 'processing',
       exportId: newExport.id
     }, { status: 202 })
