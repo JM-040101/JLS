@@ -441,7 +441,9 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
     })
 
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 120000, // 2 minutes max per API call
+      maxRetries: 2 // Retry twice on failures
     })
 
     // Load knowledge bases
