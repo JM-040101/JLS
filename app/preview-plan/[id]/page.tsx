@@ -22,7 +22,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [plan, setPlan] = useState<string>('')
   const [editedPlan, setEditedPlan] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Start false, only show loading if generating
   const [isSaving, setIsSaving] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
@@ -137,6 +137,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   async function generatePlan() {
     try {
       console.log('[PREVIEW-PLAN] Starting plan generation for session:', params.id)
+      setIsLoading(true) // Show loading screen when actually generating
       setIsGenerating(true)
       setError(null)
 
@@ -887,7 +888,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               >
                 Try Again
               </button>
-            ) :
+            ) : (
             <button
               onClick={async () => {
                 if (!currentExportId) return
@@ -961,6 +962,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                 'Check Status'
               )}
             </button>
+            )}
           </div>
 
           {/* Helper text */}

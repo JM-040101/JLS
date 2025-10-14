@@ -52,16 +52,17 @@ export async function GET(
 
     // Create ZIP file
     const zipBuffer = await createZip(exportRecord.files)
+    const uint8Array = new Uint8Array(zipBuffer)
 
-    console.log('[EXPORT-DOWNLOAD] ZIP created successfully, size:', zipBuffer.length, 'bytes')
+    console.log('[EXPORT-DOWNLOAD] ZIP created successfully, size:', uint8Array.length, 'bytes')
 
     // Return ZIP file
-    return new NextResponse(zipBuffer, {
+    return new Response(uint8Array, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="saas-blueprint.zip"',
-        'Content-Length': zipBuffer.length.toString()
+        'Content-Length': uint8Array.length.toString()
       }
     })
 
@@ -130,5 +131,5 @@ async function createZip(files: {
   }
 
   console.log('[CREATE-ZIP] ZIP structure created successfully')
-  return await zip.generateAsync({ type: 'nodebuffer' })
+  return await zip.generateAsync({ type: 'arraybuffer' })
 }
