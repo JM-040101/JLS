@@ -104,6 +104,7 @@ function SignInForm() {
                   }}
                   placeholder="you@example.com"
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -128,6 +129,7 @@ function SignInForm() {
                   }}
                   placeholder="••••••••"
                   disabled={loading}
+                  autoComplete="current-password"
                 />
               </div>
             </div>

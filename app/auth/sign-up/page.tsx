@@ -210,9 +210,10 @@ export default function SignUpPage() {
                   placeholder="••••••••"
                   disabled={loading}
                   minLength={8}
+                  autoComplete="new-password"
                 />
               </div>
-              <p className="mt-1 text-xs" style={{ color: branding.colors.textMuted }}>
+              <p className="mt-1 text-xs" style={{ color: branding.colors.text, opacity: 0.8 }}>
                 Must be at least 8 characters
               </p>
             </div>
@@ -222,7 +223,7 @@ export default function SignUpPage() {
                 id="terms"
                 type="checkbox"
                 required
-                className="mt-1 h-4 w-4 rounded"
+                className="mt-1 h-5 w-5 rounded"
                 style={{ accentColor: branding.colors.accent }}
               />
               <label htmlFor="terms" className="ml-2 text-sm" style={{ color: branding.colors.text }}>

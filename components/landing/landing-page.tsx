@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle, Zap, FileText, Download } from 'lucide-react'
+import { ArrowRight, CheckCircle, Zap, FileText, Download, X } from 'lucide-react'
 
 export default function LandingPage() {
+  const [showDemo, setShowDemo] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white">
       {/* Header */}
@@ -42,7 +45,10 @@ export default function LandingPage() {
               Start Building Your Blueprint
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
-            <button className="btn-outline text-lg px-8 py-3">
+            <button
+              onClick={() => setShowDemo(true)}
+              className="btn-outline text-lg px-8 py-3"
+            >
               View Demo
             </button>
           </div>
@@ -169,6 +175,166 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+
+      {/* Demo Modal */}
+      {showDemo && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-blueprint-navy-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-blueprint-navy-900">
+                How SaaS Blueprint Generator Works
+              </h2>
+              <button
+                onClick={() => setShowDemo(false)}
+                className="text-blueprint-navy-600 hover:text-blueprint-navy-900 transition-colors"
+                aria-label="Close demo"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-8">
+              {/* Step 1 */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blueprint-cyan-600 text-white rounded-full flex items-center justify-center font-bold">
+                    1
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-blueprint-navy-900 mb-2">
+                      Start Your 12-Phase Workflow
+                    </h3>
+                    <p className="text-blueprint-navy-600 mb-3">
+                      Answer guided questions about your SaaS idea across 12 comprehensive phases:
+                    </p>
+                    <ul className="grid grid-cols-2 gap-2 text-sm text-blueprint-navy-700">
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        Market Analysis
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        User Personas
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        Core Features
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        Tech Stack
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        Architecture
+                      </li>
+                      <li className="flex items-center">
+                        <CheckCircle className="w-4 h-4 text-blueprint-cyan-600 mr-2" />
+                        Security & Compliance
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blueprint-cyan-600 text-white rounded-full flex items-center justify-center font-bold">
+                    2
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-blueprint-navy-900 mb-2">
+                      AI Generates Your Blueprint
+                    </h3>
+                    <p className="text-blueprint-navy-600">
+                      Our AI models (Claude Haiku for chat, Claude Sonnet 3.5 for documentation) process your answers and create:
+                    </p>
+                    <ul className="mt-3 space-y-2 text-blueprint-navy-700">
+                      <li className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-blueprint-cyan-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <span><strong>README.md:</strong> Project overview with architecture diagrams</span>
+                      </li>
+                      <li className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-blueprint-cyan-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <span><strong>CLAUDE.md:</strong> Instructions for Claude Code to build your project</span>
+                      </li>
+                      <li className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-blueprint-cyan-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <span><strong>Module docs:</strong> 8 detailed technical module specifications</span>
+                      </li>
+                      <li className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-blueprint-cyan-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <span><strong>Executable prompts:</strong> 9 ready-to-use prompts for Claude Code</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blueprint-cyan-600 text-white rounded-full flex items-center justify-center font-bold">
+                    3
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-blueprint-navy-900 mb-2">
+                      Export & Build with Claude Code
+                    </h3>
+                    <p className="text-blueprint-navy-600 mb-3">
+                      Download your complete blueprint as a ZIP file containing 21 AI-generated files. Then:
+                    </p>
+                    <ol className="space-y-2 text-blueprint-navy-700">
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blueprint-cyan-100 text-blueprint-cyan-700 rounded-full flex items-center justify-center text-sm font-semibold mr-3 mt-0.5">
+                          1
+                        </span>
+                        <span>Open the project folder in your code editor</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blueprint-cyan-100 text-blueprint-cyan-700 rounded-full flex items-center justify-center text-sm font-semibold mr-3 mt-0.5">
+                          2
+                        </span>
+                        <span>Launch Claude Code and follow the CLAUDE.md instructions</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blueprint-cyan-100 text-blueprint-cyan-700 rounded-full flex items-center justify-center text-sm font-semibold mr-3 mt-0.5">
+                          3
+                        </span>
+                        <span>Use the executable prompts to build each feature step-by-step</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blueprint-cyan-100 text-blueprint-cyan-700 rounded-full flex items-center justify-center text-sm font-semibold mr-3 mt-0.5">
+                          4
+                        </span>
+                        <span>Deploy your fully-functional SaaS application</span>
+                      </li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="bg-blueprint-cyan-50 rounded-lg p-6 text-center">
+                <h3 className="text-xl font-semibold text-blueprint-navy-900 mb-3">
+                  Ready to Build Your SaaS?
+                </h3>
+                <p className="text-blueprint-navy-600 mb-4">
+                  Start your first blueprint for free. Export takes 5-6 minutes with 21 AI-generated files.
+                </p>
+                <Link
+                  href="/auth/sign-up"
+                  className="btn-primary inline-flex items-center text-lg px-8 py-3"
+                >
+                  Get Started Free
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
