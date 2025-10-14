@@ -1073,7 +1073,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             <>
               {/* Plan Display with Beautiful Markdown Rendering */}
               <div className="p-8 sm:p-10 lg:p-12">
-                <article className="prose prose-lg prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-p:leading-relaxed prose-p:mb-4 prose-strong:font-semibold prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-a:no-underline hover:prose-a:underline prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:my-8 prose-table:border-collapse prose-th:border prose-th:px-4 prose-th:py-2 prose-td:border prose-td:px-4 prose-td:py-2" style={{
+                <article className="prose prose-lg prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h1:border-accent prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h2:border-accent prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-p:leading-relaxed prose-p:mb-4 prose-strong:font-semibold prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-a:no-underline hover:prose-a:underline prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:my-8 prose-table:border-collapse prose-th:border prose-th:px-4 prose-th:py-2 prose-td:border prose-td:px-4 prose-td:py-2" style={{
                   color: branding.colors.textHeading,
                   '--tw-prose-body': branding.colors.textHeading,
                   '--tw-prose-headings': branding.colors.textHeading,
@@ -1084,7 +1084,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   '--tw-prose-links': branding.colors.accent,
                   '--tw-prose-quotes': branding.colors.textHeading,
                   '--tw-prose-quote-borders': branding.colors.accent,
-                  '--tw-prose-hr': branding.colors.divider,
+                  '--tw-prose-hr': branding.colors.accent,
                   '--tw-prose-th-borders': branding.colors.divider,
                   '--tw-prose-td-borders': branding.colors.divider,
                   '--tw-prose-counters': branding.colors.textHeading,
