@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react'
 import GoogleAuthButton from '@/components/auth/google-auth-button'
+import { branding } from '@/branding.config'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
@@ -66,20 +67,35 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: branding.colors.background }}>
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="rounded-lg p-8 text-center" style={{
+            background: branding.colors.surface,
+            border: `1px solid ${branding.colors.divider}`,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{
+              background: `${branding.colors.success}22`,
+              border: `2px solid ${branding.colors.success}`
+            }}>
+              <CheckCircle className="w-8 h-8" style={{ color: branding.colors.success }} />
             </div>
-            <h2 className="text-2xl font-bold text-blueprint-navy-900 mb-2">
+            <h2 className="text-2xl font-bold mb-2" style={{ color: branding.colors.textHeading }}>
               Check Your Email
             </h2>
-            <p className="text-blueprint-navy-600 mb-6">
+            <p className="mb-6" style={{ color: branding.colors.text }}>
               We've sent a confirmation link to <strong>{email}</strong>.
               Please check your email to activate your account.
             </p>
-            <Link href="/auth/sign-in" className="btn-primary">
+            <Link
+              href="/auth/sign-in"
+              className="inline-block px-6 py-3 rounded-lg font-medium transition-all"
+              style={{
+                background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                color: branding.colors.background,
+                boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+              }}
+            >
               Go to Sign In
             </Link>
           </div>
@@ -89,45 +105,60 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blueprint-navy-50 to-white flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: branding.colors.background }}>
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-xl p-8">
+        <div className="rounded-lg p-8" style={{
+          background: branding.colors.surface,
+          border: `1px solid ${branding.colors.divider}`,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+        }}>
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blueprint-navy-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4" style={{
+              background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+              boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+            }}>
               <User className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-blueprint-navy-900 mb-2">
+            <h1 className="text-2xl font-bold mb-2" style={{ color: branding.colors.textHeading }}>
               Create Your Account
             </h1>
-            <p className="text-blueprint-navy-600">
+            <p style={{ color: branding.colors.text }}>
               Start building your SaaS blueprint today
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-6 p-4 rounded-lg flex items-start" style={{
+              background: `${branding.colors.error}15`,
+              border: `1px solid ${branding.colors.error}`
+            }}>
+              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" style={{ color: branding.colors.error }} />
+              <p className="text-sm" style={{ color: branding.colors.error }}>{error}</p>
             </div>
           )}
 
           {/* Sign Up Form */}
           <form onSubmit={handleSignUp} className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-blueprint-navy-700 mb-1">
+              <label htmlFor="fullName" className="block text-sm font-medium mb-1" style={{ color: branding.colors.text }}>
                 Full Name
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blueprint-navy-400" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: branding.colors.textMuted }} />
                 <input
                   id="fullName"
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="input pl-10"
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors"
+                  style={{
+                    background: branding.colors.background,
+                    borderColor: branding.colors.divider,
+                    color: branding.colors.text
+                  }}
                   placeholder="John Doe"
                   disabled={loading}
                 />
@@ -135,18 +166,23 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-blueprint-navy-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: branding.colors.text }}>
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blueprint-navy-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: branding.colors.textMuted }} />
                 <input
                   id="email"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input pl-10"
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors"
+                  style={{
+                    background: branding.colors.background,
+                    borderColor: branding.colors.divider,
+                    color: branding.colors.text
+                  }}
                   placeholder="you@example.com"
                   disabled={loading}
                 />
@@ -154,24 +190,29 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-blueprint-navy-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: branding.colors.text }}>
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blueprint-navy-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: branding.colors.textMuted }} />
                 <input
                   id="password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input pl-10"
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors"
+                  style={{
+                    background: branding.colors.background,
+                    borderColor: branding.colors.divider,
+                    color: branding.colors.text
+                  }}
                   placeholder="••••••••"
                   disabled={loading}
                   minLength={8}
                 />
               </div>
-              <p className="mt-1 text-xs text-blueprint-navy-500">
+              <p className="mt-1 text-xs" style={{ color: branding.colors.textMuted }}>
                 Must be at least 8 characters
               </p>
             </div>
@@ -181,15 +222,16 @@ export default function SignUpPage() {
                 id="terms"
                 type="checkbox"
                 required
-                className="mt-1 h-4 w-4 text-blueprint-cyan-600 focus:ring-blueprint-cyan-500 border-blueprint-navy-300 rounded"
+                className="mt-1 h-4 w-4 rounded"
+                style={{ accentColor: branding.colors.accent }}
               />
-              <label htmlFor="terms" className="ml-2 text-sm text-blueprint-navy-600">
+              <label htmlFor="terms" className="ml-2 text-sm" style={{ color: branding.colors.text }}>
                 I agree to the{' '}
-                <Link href="/terms" className="text-blueprint-cyan-600 hover:text-blueprint-cyan-700">
+                <Link href="/terms" className="transition-colors" style={{ color: branding.colors.accent }}>
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link href="/privacy" className="text-blueprint-cyan-600 hover:text-blueprint-cyan-700">
+                <Link href="/privacy" className="transition-colors" style={{ color: branding.colors.accent }}>
                   Privacy Policy
                 </Link>
               </label>
@@ -198,7 +240,12 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full"
+              className="w-full py-3 px-4 rounded-lg font-medium transition-all"
+              style={{
+                background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                color: branding.colors.background,
+                boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+              }}
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
@@ -207,10 +254,13 @@ export default function SignUpPage() {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-blueprint-navy-200"></div>
+              <div className="w-full border-t" style={{ borderColor: branding.colors.divider }}></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-blueprint-navy-500">Or continue with</span>
+              <span className="px-2" style={{
+                background: branding.colors.surface,
+                color: branding.colors.textMuted
+              }}>Or continue with</span>
             </div>
           </div>
 
@@ -218,11 +268,12 @@ export default function SignUpPage() {
           <GoogleAuthButton />
 
           {/* Sign In Link */}
-          <p className="mt-6 text-center text-sm text-blueprint-navy-600">
+          <p className="mt-6 text-center text-sm" style={{ color: branding.colors.text }}>
             Already have an account?{' '}
             <Link
               href="/auth/sign-in"
-              className="font-medium text-blueprint-cyan-600 hover:text-blueprint-cyan-700"
+              className="font-medium transition-colors"
+              style={{ color: branding.colors.accent }}
             >
               Sign in
             </Link>
