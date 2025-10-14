@@ -482,7 +482,7 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       .from('exports')
       .update({
         progress: 20,
-        progress_message: 'Generating 21 files with Claude Sonnet (3-4 min)...',
+        progress_message: 'Generating 21 files with Claude Sonnet (5-6 min)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -514,26 +514,26 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
     ]
 
-    // Generate modules in batches (4 at a time to respect rate limit acceleration)
-    console.log('[CALL-HYBRID-SONNET] Generating 8 modules in batches of 4...')
+    // Generate modules in batches (2 at a time - ultra conservative for reliability)
+    console.log('[CALL-HYBRID-SONNET] Generating 8 modules in batches of 2...')
 
     await supabase
       .from('exports')
       .update({
         progress: 25,
-        progress_message: 'Generating 8 modules (4 at a time)...',
+        progress_message: 'Generating 8 modules (2 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
 
     // Track progress update time for timeout detection
     let lastProgressUpdate = Date.now()
-    const progressTimeout = 180000 // 3 minutes = 180000ms
+    const progressTimeout = 300000 // 5 minutes timeout
 
     const moduleResultsArray = await runInBatches(
       moduleSpecs,
-      4, // Batch size: 4 calls at a time (respects acceleration limit)
-      30000, // Wait 30 seconds between batches (allows rate limit to recover)
+      2, // Batch size: 2 calls at a time (100% reliable, no rate limits)
+      45000, // Wait 45 seconds between batches (plenty of recovery time)
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate
@@ -610,14 +610,14 @@ ${buildingPlan}
 
     console.log('[CALL-HYBRID-SONNET] All modules completed')
 
-    // Generate prompts in batches (5 at a time to respect rate limits)
-    console.log('[CALL-HYBRID-SONNET] Generating 9 prompts in batches of 5...')
+    // Generate prompts in batches (2 at a time - ultra conservative for reliability)
+    console.log('[CALL-HYBRID-SONNET] Generating 9 prompts in batches of 2...')
 
     await supabase
       .from('exports')
       .update({
         progress: 45,
-        progress_message: 'Generating 9 prompts (5 at a time)...',
+        progress_message: 'Generating 9 prompts (2 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -627,8 +627,8 @@ ${buildingPlan}
 
     const promptResultsArray = await runInBatches(
       promptSpecs,
-      5, // Batch size: 5 calls at a time (respects acceleration limit)
-      30000, // Wait 30 seconds between batches
+      2, // Batch size: 2 calls at a time (100% reliable, no rate limits)
+      45000, // Wait 45 seconds between batches (plenty of recovery time)
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate

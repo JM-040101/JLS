@@ -94,7 +94,7 @@ async function handleExport(sessionId: string) {
         }
 
         return NextResponse.json({
-          message: existingExport.progress_message || 'Export is being generated. This takes 3-4 minutes with 21 individual files.',
+          message: existingExport.progress_message || 'Export is being generated. This takes 5-6 minutes with 21 individual files.',
           status: 'processing',
           exportId: existingExport.id,
           progress: existingExport.progress || 0
@@ -136,7 +136,7 @@ async function handleExport(sessionId: string) {
     console.log('[EXPORT] Inngest event triggered successfully')
 
     return NextResponse.json({
-      message: 'Export generation started. This takes 3-4 minutes with 21 individual AI-generated files. Please check back in 4 minutes.',
+      message: 'Export generation started. This takes 5-6 minutes with 21 individual AI-generated files. Please check back in 6 minutes.',
       status: 'processing',
       exportId: newExport.id
     }, { status: 202 })
