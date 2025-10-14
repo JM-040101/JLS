@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import 'highlight.js/styles/github-dark.css'
+import { branding } from '@/branding.config'
 
 interface PlanPreviewProps {
   params: {
@@ -303,29 +304,120 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          {/* Simple spinner */}
-          <div className="mb-6 relative inline-block">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div style={{ background: branding.colors.background }} className="min-h-screen flex items-center justify-center relative overflow-hidden">
+        {/* Animated background particles */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="particle particle-1"></div>
+          <div className="particle particle-2"></div>
+          <div className="particle particle-3"></div>
+          <div className="particle particle-4"></div>
+          <div className="particle particle-5"></div>
+        </div>
+
+        <div className="text-center max-w-xl px-6 relative z-10">
+          {/* Glowing spinner with pulse effect */}
+          <div className="mb-8 relative inline-block">
+            {/* Outer glow ring */}
+            <div
+              className="absolute inset-0 rounded-full blur-xl animate-pulse"
+              style={{
+                background: branding.colors.accentGlow,
+                transform: 'scale(1.5)'
+              }}
+            ></div>
+
+            {/* Middle rotating ring */}
+            <div
+              className="w-24 h-24 border-4 rounded-full animate-spin relative"
+              style={{
+                borderColor: `${branding.colors.divider} ${branding.colors.divider} ${branding.colors.accent} ${branding.colors.accent}`,
+              }}
+            ></div>
+
+            {/* Inner rotating ring (opposite direction) */}
+            <div
+              className="absolute inset-3 border-4 rounded-full animate-spin-reverse"
+              style={{
+                borderColor: `${branding.colors.accent} transparent ${branding.colors.accentLight} transparent`,
+              }}
+            ></div>
+
+            {/* Center dot */}
+            <div
+              className="absolute inset-0 m-auto w-8 h-8 rounded-full animate-pulse"
+              style={{ background: branding.colors.accent }}
+            ></div>
           </div>
 
-          {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          {/* Title with gradient text */}
+          <h2
+            className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${branding.colors.textHeading} 0%, ${branding.colors.accent} 100%)`,
+              fontFamily: branding.fonts.heading
+            }}
+          >
             Generating Your Building Plan
           </h2>
 
-          {/* Status Messages */}
-          <div className="space-y-2 mb-6 text-gray-600">
-            <p>🧠 GPT-4 is analyzing your answers...</p>
-            <p className="text-sm">✨ Synthesizing with knowledge base patterns</p>
+          {/* Status Messages with icons */}
+          <div className="space-y-3 mb-8">
+            <div
+              className="flex items-center justify-center gap-3 p-3 rounded-lg backdrop-blur-sm border"
+              style={{
+                backgroundColor: `${branding.colors.surface}CC`,
+                borderColor: branding.colors.divider,
+                color: branding.colors.text
+              }}
+            >
+              <span className="text-2xl animate-bounce">🧠</span>
+              <span className="text-sm">GPT-4 is analyzing your answers...</span>
+            </div>
+            <div
+              className="flex items-center justify-center gap-3 p-3 rounded-lg backdrop-blur-sm border"
+              style={{
+                backgroundColor: `${branding.colors.surface}CC`,
+                borderColor: branding.colors.divider,
+                color: branding.colors.text
+              }}
+            >
+              <span className="text-2xl animate-pulse">✨</span>
+              <span className="text-sm">Synthesizing with knowledge base patterns</span>
+            </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-progress"></div>
+          {/* Animated progress bar with glow */}
+          <div
+            className="w-full rounded-full h-3 mb-3 relative overflow-hidden"
+            style={{ backgroundColor: branding.colors.surface }}
+          >
+            {/* Glow effect behind bar */}
+            <div
+              className="absolute inset-0 blur-md opacity-50"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${branding.colors.accent}, transparent)`,
+              }}
+            ></div>
+
+            {/* Progress bar */}
+            <div
+              className="h-3 rounded-full animate-progress relative"
+              style={{
+                background: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+              }}
+            ></div>
+
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 shimmer"></div>
           </div>
-          <p className="text-sm text-gray-500">This usually takes 10-20 seconds...</p>
+
+          <p
+            className="text-sm"
+            style={{ color: branding.colors.textMuted }}
+          >
+            This usually takes 10-20 seconds...
+          </p>
         </div>
 
         <style jsx>{`
@@ -336,6 +428,86 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           .animate-progress {
             animation: progress 15s ease-out forwards;
           }
+
+          @keyframes spin-reverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+          }
+          .animate-spin-reverse {
+            animation: spin-reverse 2s linear infinite;
+          }
+
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-20px) translateX(10px); }
+          }
+
+          .particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 10s ease-in-out infinite;
+          }
+
+          .particle-1 {
+            width: 100px;
+            height: 100px;
+            background: ${branding.colors.accent};
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+          }
+
+          .particle-2 {
+            width: 150px;
+            height: 150px;
+            background: ${branding.colors.gradientTo};
+            top: 60%;
+            right: 10%;
+            animation-delay: 2s;
+          }
+
+          .particle-3 {
+            width: 80px;
+            height: 80px;
+            background: ${branding.colors.accent};
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 4s;
+          }
+
+          .particle-4 {
+            width: 120px;
+            height: 120px;
+            background: ${branding.colors.gradientTo};
+            top: 30%;
+            right: 30%;
+            animation-delay: 1s;
+          }
+
+          .particle-5 {
+            width: 90px;
+            height: 90px;
+            background: ${branding.colors.accent};
+            bottom: 40%;
+            right: 20%;
+            animation-delay: 3s;
+          }
+
+          @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+          }
+
+          .shimmer {
+            background: linear-gradient(
+              90deg,
+              transparent,
+              rgba(255, 255, 255, 0.1),
+              transparent
+            );
+            animation: shimmer 2s infinite;
+          }
         `}</style>
       </div>
     )
@@ -343,14 +515,63 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-          <div className="text-red-600 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+      <div style={{ background: branding.colors.background }} className="min-h-screen flex items-center justify-center p-4">
+        <div
+          className="max-w-md w-full rounded-2xl p-8 border"
+          style={{
+            backgroundColor: branding.colors.surface,
+            borderColor: branding.colors.error,
+            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px ${branding.colors.error}33`
+          }}
+        >
+          {/* Error icon with glow */}
+          <div className="flex justify-center mb-4">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center border-2"
+              style={{
+                backgroundColor: branding.colors.primary,
+                borderColor: branding.colors.error,
+                boxShadow: `0 0 20px ${branding.colors.error}66`
+              }}
+            >
+              <span className="text-4xl" style={{ color: branding.colors.error }}>⚠️</span>
+            </div>
+          </div>
+
+          <h2
+            className="text-2xl font-bold mb-3 text-center"
+            style={{
+              color: branding.colors.textHeading,
+              fontFamily: branding.fonts.heading
+            }}
+          >
+            Error
+          </h2>
+
+          <p
+            className="mb-6 text-center"
+            style={{ color: branding.colors.text }}
+          >
+            {error}
+          </p>
+
           <button
             onClick={() => router.push(`/workflow/${params.id}`)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full px-6 py-3 rounded-lg font-medium transition-all duration-200"
+            style={{
+              background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+              color: branding.colors.background,
+              border: `1px solid ${branding.colors.accent}`,
+              boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = `0 0 30px ${branding.colors.accentGlow}`
+              e.currentTarget.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = `0 0 20px ${branding.colors.accentGlow}`
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
           >
             Back to Workflow
           </button>
@@ -361,29 +582,189 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
   if (exportInfo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-          <div className="text-blue-600 text-5xl mb-4">⏳</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Export Processing</h2>
-          <p className="text-gray-600 mb-6">{exportInfo}</p>
+      <div style={{ background: branding.colors.background }} className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Subtle animated background */}
+        <div className="absolute inset-0 overflow-hidden opacity-20">
+          <div className="floating-orb orb-1"></div>
+          <div className="floating-orb orb-2"></div>
+          <div className="floating-orb orb-3"></div>
+        </div>
+
+        <div
+          className="max-w-lg w-full rounded-2xl p-8 relative z-10 backdrop-blur-sm border"
+          style={{
+            backgroundColor: `${branding.colors.surface}EE`,
+            borderColor: branding.colors.divider,
+            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.5), 0 0 50px ${branding.colors.accentGlow}`
+          }}
+        >
+          {/* Animated hourglass icon */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              {/* Glow effect */}
+              <div
+                className="absolute inset-0 rounded-full blur-2xl animate-pulse"
+                style={{
+                  background: branding.colors.accentGlow,
+                  transform: 'scale(1.5)'
+                }}
+              ></div>
+
+              {/* Icon container */}
+              <div
+                className="relative w-20 h-20 rounded-full flex items-center justify-center border-2"
+                style={{
+                  backgroundColor: branding.colors.primary,
+                  borderColor: branding.colors.accent,
+                  boxShadow: `0 0 30px ${branding.colors.accentGlow}`
+                }}
+              >
+                <span className="text-5xl animate-pulse" style={{ color: branding.colors.accent }}>⏳</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h2
+            className="text-3xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-to-r"
+            style={{
+              backgroundImage: `linear-gradient(135deg, ${branding.colors.textHeading} 0%, ${branding.colors.accent} 100%)`,
+              fontFamily: branding.fonts.heading
+            }}
+          >
+            Export Processing
+          </h2>
+
+          {/* Message with info styling */}
+          <div
+            className="mb-6 p-4 rounded-lg border"
+            style={{
+              backgroundColor: branding.colors.primary,
+              borderColor: branding.colors.info,
+              color: branding.colors.text
+            }}
+          >
+            <p className="text-sm leading-relaxed">{exportInfo}</p>
+          </div>
+
+          {/* Animated progress indicator */}
+          <div className="mb-8">
+            <div
+              className="h-2 rounded-full overflow-hidden"
+              style={{ backgroundColor: branding.colors.primary }}
+            >
+              <div
+                className="h-2 rounded-full pulse-bar"
+                style={{
+                  background: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                  boxShadow: `0 0 10px ${branding.colors.accentGlow}`
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
           <div className="flex gap-3">
             <button
               onClick={() => setExportInfo(null)}
-              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200"
+              style={{
+                backgroundColor: branding.colors.secondary,
+                color: branding.colors.text,
+                border: `1px solid ${branding.colors.divider}`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                e.currentTarget.style.borderColor = branding.colors.accent
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = branding.colors.secondary
+                e.currentTarget.style.borderColor = branding.colors.divider
+              }}
             >
               Close
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 setExportInfo(null)
-                handleExport()
+                await handleExport()
               }}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200 glow-button"
+              style={{
+                background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                color: branding.colors.background,
+                border: `1px solid ${branding.colors.accent}`,
+                boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+              }}
             >
               Check Status
             </button>
           </div>
+
+          {/* Helper text */}
+          <p
+            className="text-xs text-center mt-4"
+            style={{ color: branding.colors.textMuted }}
+          >
+            Tip: Come back in 7 minutes for your completed export
+          </p>
         </div>
+
+        <style jsx>{`
+          @keyframes float-orb {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+          }
+
+          .floating-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float-orb 15s ease-in-out infinite;
+          }
+
+          .orb-1 {
+            width: 200px;
+            height: 200px;
+            background: ${branding.colors.accent};
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+          }
+
+          .orb-2 {
+            width: 250px;
+            height: 250px;
+            background: ${branding.colors.gradientTo};
+            bottom: 10%;
+            right: 10%;
+            animation-delay: 5s;
+          }
+
+          .orb-3 {
+            width: 180px;
+            height: 180px;
+            background: ${branding.colors.accent};
+            top: 50%;
+            left: 50%;
+            animation-delay: 10s;
+          }
+
+          @keyframes pulse-bar {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+          }
+
+          .pulse-bar {
+            animation: pulse-bar 2s ease-in-out infinite;
+          }
+
+          .glow-button:hover {
+            box-shadow: 0 0 30px ${branding.colors.accentGlow} !important;
+            transform: translateY(-2px);
+          }
+        `}</style>
       </div>
     )
   }
