@@ -61,14 +61,32 @@ async function handleExport(sessionId: string) {
     if (existingExport) {
       if (existingExport.status === 'completed' && existingExport.files) {
         console.log('[EXPORT] Returning existing completed export:', existingExport.id)
-        const zipBuffer = await createZip(existingExport.files)
-
-        return new Response(new Uint8Array(zipBuffer), {
-          headers: {
-            'Content-Type': 'application/zip',
-            'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
-          }
+        console.log('[EXPORT] Files structure:', {
+          hasReadme: !!existingExport.files.readme,
+          hasClaude: !!existingExport.files.claude,
+          hasUserInstructions: !!existingExport.files.userInstructions,
+          hasQuickStart: !!existingExport.files.quickStart,
+          moduleCount: Object.keys(existingExport.files.modules || {}).length,
+          promptCount: Object.keys(existingExport.files.prompts || {}).length
         })
+
+        try {
+          const zipBuffer = await createZip(existingExport.files)
+          console.log('[EXPORT] ZIP created successfully, size:', zipBuffer.byteLength, 'bytes')
+
+          return new Response(new Uint8Array(zipBuffer), {
+            headers: {
+              'Content-Type': 'application/zip',
+              'Content-Disposition': 'attachment; filename="saas-blueprint.zip"'
+            }
+          })
+        } catch (zipError) {
+          console.error('[EXPORT] Error creating ZIP:', zipError)
+          return NextResponse.json({
+            error: `Failed to create ZIP file: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`,
+            status: 'failed'
+          }, { status: 500 })
+        }
       }
 
       if (existingExport.status === 'processing') {
