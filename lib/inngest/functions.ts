@@ -424,6 +424,32 @@ export const generateExportFunction = inngest.createFunction(
   }
 )
 
+// Helper function to run promises in batches with delays (avoid rate limits)
+async function runInBatches<T>(
+  items: T[],
+  batchSize: number,
+  delayMs: number,
+  processFn: (item: T) => Promise<any>
+): Promise<any[]> {
+  const results: any[] = []
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    console.log(`[BATCH] Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)} (${batch.length} items)`)
+
+    const batchResults = await Promise.all(batch.map(processFn))
+    results.push(...batchResults)
+
+    // Wait between batches (except after the last batch)
+    if (i + batchSize < items.length) {
+      console.log(`[BATCH] Waiting ${delayMs}ms before next batch...`)
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+  }
+
+  return results
+}
+
 // Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) - SPLIT into individual calls
 async function callHybridForExportInParts(buildingPlan: string, exportId: string, supabase: any) {
   console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 individual calls + Claude)')
@@ -493,22 +519,26 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
     ]
 
-    // Generate modules in parallel (8 calls simultaneously)
-    console.log('[CALL-HYBRID-GPT] Generating 8 modules in parallel...')
+    // Generate modules in batches (4 at a time to avoid rate limits)
+    console.log('[CALL-HYBRID-GPT] Generating 8 modules in batches of 4...')
 
     await supabase
       .from('exports')
       .update({
         progress: 25,
-        progress_message: 'Generating all 8 modules in parallel...',
+        progress_message: 'Generating 8 modules (4 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
 
-    const modulePromises = moduleSpecs.map(async (spec) => {
-      console.log(`[CALL-HYBRID-GPT] Starting module: ${spec.name}`)
+    const moduleResultsArray = await runInBatches(
+      moduleSpecs,
+      4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
+      60000, // Wait 60 seconds between batches (rate limit resets per minute)
+      async (spec) => {
+        console.log(`[CALL-HYBRID-GPT] Generating module: ${spec.name}`)
 
-      const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
+        const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
 
 **CRITICAL: This module must be 600-900 words with ALL sections completed. Include real code examples.**
 
@@ -533,28 +563,28 @@ ${buildingPlan}
 
 **Write COMPLETE module with ALL code examples. DO NOT truncate.**`
 
-      const moduleResponse = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{ role: "user", content: modulePrompt }],
-        max_tokens: 4096,
-        temperature: 0.7
-      })
+        const moduleResponse = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [{ role: "user", content: modulePrompt }],
+          max_tokens: 4096,
+          temperature: 0.7
+        })
 
-      console.log(`[CALL-HYBRID-GPT] Module ${spec.name} completed:`, {
-        finishReason: moduleResponse.choices[0].finish_reason,
-        tokensUsed: moduleResponse.usage
-      })
+        console.log(`[CALL-HYBRID-GPT] Module ${spec.name} completed:`, {
+          finishReason: moduleResponse.choices[0].finish_reason,
+          tokensUsed: moduleResponse.usage
+        })
 
-      const content = moduleResponse.choices[0].message.content || ''
-      const parsed = parseClaudeOutput(content)
+        const content = moduleResponse.choices[0].message.content || ''
+        const parsed = parseClaudeOutput(content)
 
-      return {
-        name: spec.name,
-        content: parsed.modules[spec.name] || content
+        return {
+          name: spec.name,
+          content: parsed.modules[spec.name] || content
+        }
       }
-    })
+    )
 
-    const moduleResultsArray = await Promise.all(modulePromises)
     const moduleResults: Record<string, string> = {}
     moduleResultsArray.forEach(({ name, content }) => {
       moduleResults[name] = content
@@ -562,22 +592,26 @@ ${buildingPlan}
 
     console.log('[CALL-HYBRID-GPT] All modules completed')
 
-    // Generate prompts in parallel (9 calls simultaneously)
-    console.log('[CALL-HYBRID-GPT] Generating 9 prompts in parallel...')
+    // Generate prompts in batches (4 at a time to avoid rate limits)
+    console.log('[CALL-HYBRID-GPT] Generating 9 prompts in batches of 4...')
 
     await supabase
       .from('exports')
       .update({
         progress: 45,
-        progress_message: 'Generating all 9 prompts in parallel...',
+        progress_message: 'Generating 9 prompts (4 at a time)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
 
-    const promptPromises = promptSpecs.map(async (spec) => {
-      console.log(`[CALL-HYBRID-GPT] Starting prompt: ${spec.num}-${spec.name}`)
+    const promptResultsArray = await runInBatches(
+      promptSpecs,
+      4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
+      60000, // Wait 60 seconds between batches
+      async (spec) => {
+        console.log(`[CALL-HYBRID-GPT] Generating prompt: ${spec.num}-${spec.name}`)
 
-      const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
+        const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
 
 **CRITICAL: This prompt must be 500-750 words with DETAILED steps and code examples.**
 
@@ -602,29 +636,29 @@ ${buildingPlan}
 
 **Write COMPLETE prompt with ALL code examples. DO NOT truncate.**`
 
-      const promptResponse = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{ role: "user", content: promptPrompt }],
-        max_tokens: 4096,
-        temperature: 0.7
-      })
+        const promptResponse = await openai.chat.completions.create({
+          model: "gpt-4-turbo",
+          messages: [{ role: "user", content: promptPrompt }],
+          max_tokens: 4096,
+          temperature: 0.7
+        })
 
-      console.log(`[CALL-HYBRID-GPT] Prompt ${spec.num}-${spec.name} completed:`, {
-        finishReason: promptResponse.choices[0].finish_reason,
-        tokensUsed: promptResponse.usage
-      })
+        console.log(`[CALL-HYBRID-GPT] Prompt ${spec.num}-${spec.name} completed:`, {
+          finishReason: promptResponse.choices[0].finish_reason,
+          tokensUsed: promptResponse.usage
+        })
 
-      const content = promptResponse.choices[0].message.content || ''
-      const parsed = parseClaudeOutput(content)
-      const promptKey = `${spec.num}-${spec.name}`
+        const content = promptResponse.choices[0].message.content || ''
+        const parsed = parseClaudeOutput(content)
+        const promptKey = `${spec.num}-${spec.name}`
 
-      return {
-        key: promptKey,
-        content: parsed.prompts[promptKey] || content
+        return {
+          key: promptKey,
+          content: parsed.prompts[promptKey] || content
+        }
       }
-    })
+    )
 
-    const promptResultsArray = await Promise.all(promptPromises)
     const promptResults: Record<string, string> = {}
     promptResultsArray.forEach(({ key, content }) => {
       promptResults[key] = content
