@@ -52,7 +52,7 @@ async function handleExport(sessionId: string) {
     // 3. Check if there's already a completed export
     const { data: existingExport } = await supabase
       .from('exports')
-      .select('id, status, files, progress, progress_message')
+      .select('id, status, files, progress, progress_message, error_message, created_at')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
       .limit(1)
