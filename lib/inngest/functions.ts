@@ -424,9 +424,9 @@ export const generateExportFunction = inngest.createFunction(
   }
 )
 
-// Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) in parallel
+// Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) - SPLIT into individual calls
 async function callHybridForExportInParts(buildingPlan: string, exportId: string, supabase: any) {
-  console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 + Claude in parallel)')
+  console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 individual calls + Claude)')
 
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -454,42 +454,74 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       'utf-8'
     )
 
-    // Run GPT-4 and Claude calls in parallel
-    console.log('[CALL-HYBRID] Launching parallel calls...')
+    console.log('[CALL-HYBRID] Starting generation...')
     await supabase
       .from('exports')
       .update({
         progress: 20,
-        progress_message: 'Launching AI generation (GPT-4 + Claude)...',
+        progress_message: 'Generating files individually for completeness...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
 
     const startTime = Date.now()
 
-    const [gptModulesResult, gptPromptsResult, claudeDocsResult] = await Promise.all([
-      // GPT-4 Call 1: Generate 8 module READMEs (fast, structured)
-      (async () => {
-        console.log('[CALL-HYBRID-GPT] Generating 8 module READMEs...')
-        const modulesPrompt = `You are an expert software architect. Generate 8 COMPLETE, DETAILED module README files.
+    // Define module specs
+    const moduleSpecs = [
+      { name: 'auth', desc: 'Authentication strategy, user roles, session management, JWT/OAuth flows, security best practices, example middleware code' },
+      { name: 'api', desc: 'API architecture, endpoint list, request/response examples, rate limiting, error handling, validation schemas' },
+      { name: 'database', desc: 'Complete schema with SQL, multi-tenancy, RLS policies, migrations, indexing, query optimization' },
+      { name: 'ui', desc: 'Component hierarchy, design system tokens, routing, state management, responsive design, example code' },
+      { name: 'payments', desc: 'Stripe integration, subscription tiers, webhook handling, EU VAT compliance, payment flows, error recovery' },
+      { name: 'deployment', desc: 'Vercel deployment checklist, environment variables, CI/CD pipeline, domain config, monitoring, rollback' },
+      { name: 'testing', desc: 'Testing strategy, unit/integration/E2E test examples, coverage requirements, mocking strategies' },
+      { name: 'security', desc: 'Security checklist, input validation, XSS/CSRF prevention, SQL injection prevention, rate limiting' }
+    ]
 
-**CRITICAL: Each module must be 500-800 words with ALL sections completed.**
+    // Define prompt specs
+    const promptSpecs = [
+      { num: '01', name: 'setup-project', desc: 'Context, prerequisites, Next.js 14 setup, dependencies, folder structure, environment variables, success criteria, next steps' },
+      { num: '02', name: 'setup-database', desc: 'Context, Supabase setup, schema SQL, RLS policies, migrations, seeding, connection verification, next steps' },
+      { num: '03', name: 'setup-auth', desc: 'Context, auth flow diagram, Supabase Auth setup, middleware code, protected routes, session management, testing, next steps' },
+      { num: '04', name: 'create-api', desc: 'Context, API architecture, endpoint list, route handlers, input validation with Zod, error handling, rate limiting, testing, next steps' },
+      { num: '05', name: 'create-ui', desc: 'Context, component hierarchy, design system, core components, routing, state management, form handling, responsive testing, next steps' },
+      { num: '06', name: 'integrate-payments', desc: 'Context, payment flow, Stripe setup, API keys, subscription code, webhooks, payment intents, EU VAT, testing with Stripe CLI, next steps' },
+      { num: '07', name: 'testing', desc: 'Context, testing strategy, Jest/Vitest setup, unit tests, integration tests, component tests, E2E with Playwright, coverage, next steps' },
+      { num: '08', name: 'security', desc: 'Context, security checklist, input validation, XSS prevention, CSRF tokens, rate limiting with Upstash, security headers, penetration testing, next steps' },
+      { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
+    ]
 
-Generate EXACTLY these 8 files:
+    // Generate modules individually (8 calls)
+    console.log('[CALL-HYBRID-GPT] Generating 8 modules individually...')
+    const moduleResults: Record<string, string> = {}
 
-1. **modules/auth/README.md** - Authentication strategy, user roles, session management, JWT/OAuth flows, security best practices, example middleware code
-2. **modules/api/README.md** - API architecture, endpoint list, request/response examples, rate limiting, error handling, validation schemas
-3. **modules/database/README.md** - Complete schema with SQL, multi-tenancy, RLS policies, migrations, indexing, query optimization
-4. **modules/ui/README.md** - Component hierarchy, design system tokens, routing, state management, responsive design, example code
-5. **modules/payments/README.md** - Stripe integration, subscription tiers, webhook handling, EU VAT compliance, payment flows, error recovery
-6. **modules/deployment/README.md** - Vercel deployment checklist, environment variables, CI/CD pipeline, domain config, monitoring, rollback
-7. **modules/testing/README.md** - Testing strategy, unit/integration/E2E test examples, coverage requirements, mocking strategies
-8. **modules/security/README.md** - Security checklist, input validation, XSS/CSRF prevention, SQL injection prevention, rate limiting
+    for (let i = 0; i < moduleSpecs.length; i++) {
+      const spec = moduleSpecs[i]
+      const progress = 20 + Math.round((i / (moduleSpecs.length + promptSpecs.length)) * 40)
 
-Format each EXACTLY as:
-## File: modules/module-name/README.md
+      await supabase
+        .from('exports')
+        .update({
+          progress,
+          progress_message: `Generating module ${i + 1}/8: ${spec.name}...`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', exportId)
+
+      console.log(`[CALL-HYBRID-GPT] Generating module: ${spec.name}`)
+
+      const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
+
+**CRITICAL: This module must be 600-900 words with ALL sections completed. Include real code examples.**
+
+Generate this file:
+
+**modules/${spec.name}/README.md** - ${spec.desc}
+
+Format EXACTLY as:
+## File: modules/${spec.name}/README.md
 \`\`\`markdown
-[COMPLETE content with code examples]
+[COMPLETE content with code examples - minimum 600 words]
 \`\`\`
 
 # Knowledge Base 1
@@ -501,53 +533,61 @@ ${kb2}
 # Building Plan
 ${buildingPlan}
 
-**Write COMPLETE modules with ALL code examples.**`
+**Write COMPLETE module with ALL code examples. DO NOT truncate.**`
 
-        const modulesResponse = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [{ role: "user", content: modulesPrompt }],
-          max_tokens: 4096,
-          temperature: 0.7
+      const moduleResponse = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: [{ role: "user", content: modulePrompt }],
+        max_tokens: 4096,
+        temperature: 0.7
+      })
+
+      console.log(`[CALL-HYBRID-GPT] Module ${spec.name} completed:`, {
+        finishReason: moduleResponse.choices[0].finish_reason,
+        tokensUsed: moduleResponse.usage
+      })
+
+      const content = moduleResponse.choices[0].message.content || ''
+      const parsed = parseClaudeOutput(content)
+      if (parsed.modules[spec.name]) {
+        moduleResults[spec.name] = parsed.modules[spec.name]
+      } else {
+        console.warn(`[CALL-HYBRID-GPT] Failed to parse module: ${spec.name}`)
+        moduleResults[spec.name] = content
+      }
+    }
+
+    // Generate prompts individually (9 calls)
+    console.log('[CALL-HYBRID-GPT] Generating 9 prompts individually...')
+    const promptResults: Record<string, string> = {}
+
+    for (let i = 0; i < promptSpecs.length; i++) {
+      const spec = promptSpecs[i]
+      const progress = 20 + Math.round(((moduleSpecs.length + i) / (moduleSpecs.length + promptSpecs.length)) * 40)
+
+      await supabase
+        .from('exports')
+        .update({
+          progress,
+          progress_message: `Generating prompt ${i + 1}/9: ${spec.num}-${spec.name}...`,
+          updated_at: new Date().toISOString()
         })
+        .eq('id', exportId)
 
-        console.log('[CALL-HYBRID-GPT] Modules completed:', {
-          finishReason: modulesResponse.choices[0].finish_reason,
-          tokensUsed: modulesResponse.usage
-        })
+      console.log(`[CALL-HYBRID-GPT] Generating prompt: ${spec.num}-${spec.name}`)
 
-        await supabase
-          .from('exports')
-          .update({
-            progress: 40,
-            progress_message: 'Generated 8 module documentations...',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', exportId)
+      const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
 
-        return modulesResponse.choices[0].message.content || ''
-      })(),
+**CRITICAL: This prompt must be 500-750 words with DETAILED steps and code examples.**
 
-      // GPT-4 Call 2: Generate 9 prompt files (fast, structured)
-      (async () => {
-        console.log('[CALL-HYBRID-GPT] Generating 9 implementation prompts...')
-        const promptsPrompt = `You are an expert developer coach. Generate 9 COMPLETE, ACTIONABLE implementation prompts. Each must be 400-650 words with DETAILED steps and code examples.
+Generate this file:
 
-Generate EXACTLY these 9 files:
+**prompts/${spec.num}-${spec.name}.md** - ${spec.desc}
 
-1. **prompts/01-setup-project.md** - Context, prerequisites, Next.js 14 setup, dependencies, folder structure, environment variables, success criteria, next steps
-2. **prompts/02-setup-database.md** - Context, Supabase setup, schema SQL, RLS policies, migrations, seeding, connection verification, next steps
-3. **prompts/03-setup-auth.md** - Context, auth flow diagram, Supabase Auth setup, middleware code, protected routes, session management, testing, next steps
-4. **prompts/04-create-api.md** - Context, API architecture, endpoint list, route handlers, input validation with Zod, error handling, rate limiting, testing, next steps
-5. **prompts/05-create-ui.md** - Context, component hierarchy, design system, core components, routing, state management, form handling, responsive testing, next steps
-6. **prompts/06-integrate-payments.md** - Context, payment flow, Stripe setup, API keys, subscription code, webhooks, payment intents, EU VAT, testing with Stripe CLI, next steps
-7. **prompts/07-testing.md** - Context, testing strategy, Jest/Vitest setup, unit tests, integration tests, component tests, E2E with Playwright, coverage, next steps
-8. **prompts/08-security.md** - Context, security checklist, input validation, XSS prevention, CSRF tokens, rate limiting with Upstash, security headers, penetration testing, next steps
-9. **prompts/09-deploy.md** - Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance
-
-Format each EXACTLY as:
-## File: prompts/##-name.md
+Format EXACTLY as:
+## File: prompts/${spec.num}-${spec.name}.md
 \`\`\`markdown
-[COMPLETE prompt with ALL code examples]
+[COMPLETE prompt with ALL code examples and commands - minimum 500 words]
 \`\`\`
 
 # Knowledge Base 1
@@ -559,31 +599,33 @@ ${kb2}
 # Building Plan
 ${buildingPlan}
 
-**Write COMPLETE prompts with ALL code examples and commands.**`
+**Write COMPLETE prompt with ALL code examples. DO NOT truncate.**`
 
-        const promptsResponse = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [{ role: "user", content: promptsPrompt }],
-          max_tokens: 4096,
-          temperature: 0.7
-        })
+      const promptResponse = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: [{ role: "user", content: promptPrompt }],
+        max_tokens: 4096,
+        temperature: 0.7
+      })
 
-        console.log('[CALL-HYBRID-GPT] Prompts completed:', {
-          finishReason: promptsResponse.choices[0].finish_reason,
-          tokensUsed: promptsResponse.usage
-        })
+      console.log(`[CALL-HYBRID-GPT] Prompt ${spec.num}-${spec.name} completed:`, {
+        finishReason: promptResponse.choices[0].finish_reason,
+        tokensUsed: promptResponse.usage
+      })
 
-        await supabase
-          .from('exports')
-          .update({
-            progress: 60,
-            progress_message: 'Generated 9 implementation prompts...',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', exportId)
+      const content = promptResponse.choices[0].message.content || ''
+      const parsed = parseClaudeOutput(content)
+      const promptKey = `${spec.num}-${spec.name}`
+      if (parsed.prompts[promptKey]) {
+        promptResults[promptKey] = parsed.prompts[promptKey]
+      } else {
+        console.warn(`[CALL-HYBRID-GPT] Failed to parse prompt: ${promptKey}`)
+        promptResults[promptKey] = content
+      }
+    }
 
-        return promptsResponse.choices[0].message.content || ''
-      })(),
+    // GPT-4 calls complete, now run Claude for core docs
+    const [claudeDocsResult] = await Promise.all([
 
       // Claude Call: Generate 4 core documentation files (quality, narrative)
       (async () => {
@@ -693,10 +735,10 @@ ${buildingPlan}
 
     const endTime = Date.now()
     const totalDuration = ((endTime - startTime) / 1000).toFixed(2)
-    console.log(`[CALL-HYBRID] All parallel calls completed in ${totalDuration}s`)
+    console.log(`[CALL-HYBRID] All sequential calls completed in ${totalDuration}s`)
 
-    // Parse all responses
-    console.log('[CALL-HYBRID] Parsing responses...')
+    // Parse Claude response
+    console.log('[CALL-HYBRID] Parsing Claude response...')
     await supabase
       .from('exports')
       .update({
@@ -706,18 +748,16 @@ ${buildingPlan}
       })
       .eq('id', exportId)
 
-    const modulesParsed = parseClaudeOutput(gptModulesResult)
-    const promptsParsed = parseClaudeOutput(gptPromptsResult)
     const docsParsed = parseClaudeOutput(claudeDocsResult)
 
-    // Combine results
+    // Combine results from individual calls
     const combinedFiles = {
       readme: docsParsed.readme,
       claude: docsParsed.claude,
       userInstructions: docsParsed.userInstructions,
       quickStart: docsParsed.quickStart || '',
-      modules: { ...modulesParsed.modules },
-      prompts: { ...promptsParsed.prompts }
+      modules: { ...moduleResults },
+      prompts: { ...promptResults }
     }
 
     await supabase
