@@ -278,6 +278,8 @@ export const generateExportFunction = inngest.createFunction(
           .from('exports')
           .update({
             status: 'processing',
+            progress: 5,
+            progress_message: 'Starting export generation...',
             updated_at: new Date().toISOString()
           })
           .eq('id', exportId)
@@ -286,6 +288,16 @@ export const generateExportFunction = inngest.createFunction(
       // Step 2: Fetch approved plan
       const plan = await step.run('fetch-plan', async () => {
         console.log('[INNGEST-EXPORT] Fetching plan:', planId)
+
+        await supabase
+          .from('exports')
+          .update({
+            progress: 10,
+            progress_message: 'Loading approved plan...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
         const { data, error } = await supabase
           .from('plans')
           .select('content, edited_content, status')
@@ -306,7 +318,17 @@ export const generateExportFunction = inngest.createFunction(
       // Step 3: Call hybrid models (GPT-4 + Claude in parallel, no timeout!)
       const files = await step.run('call-hybrid-models', async () => {
         console.log('[INNGEST-EXPORT] Calling hybrid models (GPT-4 + Claude) to generate files...')
-        const exportFiles = await callHybridForExportInParts(plan)
+
+        await supabase
+          .from('exports')
+          .update({
+            progress: 15,
+            progress_message: 'Generating documentation with AI...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
+        const exportFiles = await callHybridForExportInParts(plan, exportId, supabase)
         console.log('[INNGEST-EXPORT] Hybrid generation completed:', {
           hasReadme: !!exportFiles.readme,
           hasClaude: !!exportFiles.claude,
@@ -321,10 +343,22 @@ export const generateExportFunction = inngest.createFunction(
       // Step 4: Store files in database
       await step.run('save-export-files', async () => {
         console.log('[INNGEST-EXPORT] Saving export files to database')
+
+        await supabase
+          .from('exports')
+          .update({
+            progress: 95,
+            progress_message: 'Finalizing export...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
         await supabase
           .from('exports')
           .update({
             status: 'completed',
+            progress: 100,
+            progress_message: 'Export complete!',
             files: files,
             completed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -354,7 +388,7 @@ export const generateExportFunction = inngest.createFunction(
 )
 
 // Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) in parallel
-async function callHybridForExportInParts(buildingPlan: string) {
+async function callHybridForExportInParts(buildingPlan: string, exportId: string, supabase: any) {
   console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 + Claude in parallel)')
 
   try {
@@ -385,6 +419,15 @@ async function callHybridForExportInParts(buildingPlan: string) {
 
     // Run GPT-4 and Claude calls in parallel
     console.log('[CALL-HYBRID] Launching parallel calls...')
+    await supabase
+      .from('exports')
+      .update({
+        progress: 20,
+        progress_message: 'Launching AI generation (GPT-4 + Claude)...',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exportId)
+
     const startTime = Date.now()
 
     const [gptModulesResult, gptPromptsResult, claudeDocsResult] = await Promise.all([
@@ -435,6 +478,15 @@ ${buildingPlan}
           tokensUsed: modulesResponse.usage
         })
 
+        await supabase
+          .from('exports')
+          .update({
+            progress: 40,
+            progress_message: 'Generated 8 module documentations...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
         return modulesResponse.choices[0].message.content || ''
       })(),
 
@@ -483,6 +535,15 @@ ${buildingPlan}
           finishReason: promptsResponse.choices[0].finish_reason,
           tokensUsed: promptsResponse.usage
         })
+
+        await supabase
+          .from('exports')
+          .update({
+            progress: 60,
+            progress_message: 'Generated 9 implementation prompts...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
 
         return promptsResponse.choices[0].message.content || ''
       })(),
@@ -580,6 +641,15 @@ ${buildingPlan}
           console.warn('[CALL-HYBRID-CLAUDE] WARNING: Hit max_tokens - docs may be incomplete')
         }
 
+        await supabase
+          .from('exports')
+          .update({
+            progress: 80,
+            progress_message: 'Generated core documentation files...',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
         return docsResponse.content
       })()
     ])
@@ -590,6 +660,15 @@ ${buildingPlan}
 
     // Parse all responses
     console.log('[CALL-HYBRID] Parsing responses...')
+    await supabase
+      .from('exports')
+      .update({
+        progress: 85,
+        progress_message: 'Processing generated content...',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exportId)
+
     const modulesParsed = parseClaudeOutput(gptModulesResult)
     const promptsParsed = parseClaudeOutput(gptPromptsResult)
     const docsParsed = parseClaudeOutput(claudeDocsResult)
@@ -603,6 +682,15 @@ ${buildingPlan}
       modules: { ...modulesParsed.modules },
       prompts: { ...promptsParsed.prompts }
     }
+
+    await supabase
+      .from('exports')
+      .update({
+        progress: 90,
+        progress_message: 'Packaging 21 files...',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exportId)
 
     // Validate completeness
     const totalFiles = 4 + Object.keys(combinedFiles.modules).length + Object.keys(combinedFiles.prompts).length

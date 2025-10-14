@@ -39,22 +39,8 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
     checkAuthAndGenerate()
   }, [params.id])
 
-  // Progress tracking effect - updates progress percentage based on elapsed time
-  useEffect(() => {
-    if (!exportStartTime || !exportInfo) return
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - exportStartTime
-      const minutes = elapsed / 1000 / 60
-
-      // Estimate progress based on 5-7 minute expected duration
-      // Use 6 minutes as the midpoint for calculation
-      const estimatedProgress = Math.min(95, (minutes / 6) * 100)
-      setExportProgress(estimatedProgress)
-    }, 500) // Update every 500ms for smooth progress
-
-    return () => clearInterval(interval)
-  }, [exportStartTime, exportInfo])
+  // Note: Progress is now tracked by backend, no need for time-based estimation
+  // The progress bar updates based on real backend progress milestones
 
   async function checkAuthAndGenerate() {
     // Check authentication first
@@ -313,10 +299,15 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         console.log('[PREVIEW-PLAN] Export status:', data)
         setExportInfo(data.message || 'Export is being generated. Please try again in a moment.')
 
-        // Set start time if not already set
+        // Update progress from backend (real progress tracking!)
+        if (data.progress !== undefined) {
+          setExportProgress(data.progress)
+          console.log('[PREVIEW-PLAN] Real backend progress:', data.progress + '%')
+        }
+
+        // Set start time if not already set (for elapsed time display)
         if (!exportStartTime) {
           setExportStartTime(Date.now())
-          setExportProgress(0)
         }
       }
     } catch (err) {
@@ -684,7 +675,8 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               color: branding.colors.text
             }}
           >
-            <p className="text-sm leading-relaxed">{exportInfo}</p>
+            <p className="text-sm leading-relaxed font-medium">{exportInfo}</p>
+            <p className="text-xs mt-2 opacity-75">Using hybrid AI processing (GPT-4 + Claude in parallel)</p>
           </div>
 
           {/* Progress bar with percentage */}

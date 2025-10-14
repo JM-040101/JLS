@@ -52,7 +52,7 @@ async function handleExport(sessionId: string) {
     // 3. Check if there's already a completed export
     const { data: existingExport } = await supabase
       .from('exports')
-      .select('id, status, files')
+      .select('id, status, files, progress, progress_message')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -72,11 +72,12 @@ async function handleExport(sessionId: string) {
       }
 
       if (existingExport.status === 'processing') {
-        console.log('[EXPORT] Export is still processing:', existingExport.id)
+        console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress)
         return NextResponse.json({
-          message: 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel). Please check back in 7 minutes.',
+          message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel).',
           status: 'processing',
-          exportId: existingExport.id
+          exportId: existingExport.id,
+          progress: existingExport.progress || 0
         }, { status: 202 })
       }
 
