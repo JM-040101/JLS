@@ -72,13 +72,41 @@ async function handleExport(sessionId: string) {
       }
 
       if (existingExport.status === 'processing') {
-        console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress)
-        return NextResponse.json({
-          message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel).',
-          status: 'processing',
-          exportId: existingExport.id,
-          progress: existingExport.progress || 0
-        }, { status: 202 })
+        // Check if export is stale (> 15 minutes old)
+        const { data: exportWithTimestamp } = await supabase
+          .from('exports')
+          .select('created_at')
+          .eq('id', existingExport.id)
+          .single()
+
+        if (exportWithTimestamp) {
+          const createdAt = new Date(exportWithTimestamp.created_at)
+          const now = new Date()
+          const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
+
+          if (ageMinutes > 15) {
+            // Export is stale (stuck), mark as failed and create new one
+            console.log('[EXPORT] Export is stale (', ageMinutes.toFixed(1), 'minutes old), marking as failed and creating new one')
+            await supabase
+              .from('exports')
+              .update({
+                status: 'failed',
+                error_message: 'Export timed out after 15 minutes. Please try again.',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingExport.id)
+            // Will create a new export below
+          } else {
+            // Export is recent and actively processing
+            console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress, 'Age:', ageMinutes.toFixed(1), 'minutes')
+            return NextResponse.json({
+              message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes using hybrid AI processing (GPT-4 + Claude in parallel).',
+              status: 'processing',
+              exportId: existingExport.id,
+              progress: existingExport.progress || 0
+            }, { status: 202 })
+          }
+        }
       }
 
       if (existingExport.status === 'failed') {
