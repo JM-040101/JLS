@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     user,
