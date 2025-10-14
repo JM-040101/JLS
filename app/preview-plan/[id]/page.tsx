@@ -1058,7 +1058,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           }}>
             📋 Your SaaS Building Plan
           </h1>
-          <p className="text-lg" style={{ color: branding.colors.text }}>
+          <p className="text-lg" style={{ color: branding.colors.textHeading }}>
             Review and edit your plan before generating the final documentation
           </p>
         </div>
@@ -1074,20 +1074,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               {/* Plan Display with Beautiful Markdown Rendering */}
               <div className="p-8 sm:p-10 lg:p-12">
                 <article className="prose prose-lg prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-p:leading-relaxed prose-p:mb-4 prose-strong:font-semibold prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-a:no-underline hover:prose-a:underline prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:my-8 prose-table:border-collapse prose-th:border prose-th:px-4 prose-th:py-2 prose-td:border prose-td:px-4 prose-td:py-2" style={{
-                  color: branding.colors.text,
-                  '--tw-prose-body': branding.colors.text,
+                  color: branding.colors.textHeading,
+                  '--tw-prose-body': branding.colors.textHeading,
                   '--tw-prose-headings': branding.colors.textHeading,
                   '--tw-prose-bold': branding.colors.textHeading,
                   '--tw-prose-code': branding.colors.accent,
                   '--tw-prose-pre-bg': branding.colors.primary,
-                  '--tw-prose-pre-code': branding.colors.text,
+                  '--tw-prose-pre-code': branding.colors.textHeading,
                   '--tw-prose-links': branding.colors.accent,
-                  '--tw-prose-quotes': branding.colors.text,
+                  '--tw-prose-quotes': branding.colors.textHeading,
                   '--tw-prose-quote-borders': branding.colors.accent,
                   '--tw-prose-hr': branding.colors.divider,
                   '--tw-prose-th-borders': branding.colors.divider,
                   '--tw-prose-td-borders': branding.colors.divider,
-                  '--tw-prose-counters': branding.colors.text,
+                  '--tw-prose-counters': branding.colors.textHeading,
                   '--tw-prose-bullets': branding.colors.accent,
                 } as React.CSSProperties}>
                   <ReactMarkdown
@@ -1152,7 +1152,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               {/* Edit Mode */}
               <div className="p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2" style={{ color: branding.colors.text }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: branding.colors.textHeading }}>
                     Edit your building plan (Markdown supported)
                   </label>
                   <textarea
@@ -1162,7 +1162,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                     style={{
                       backgroundColor: branding.colors.background,
                       borderColor: branding.colors.divider,
-                      color: branding.colors.text,
+                      color: branding.colors.textHeading,
                       fontFamily: branding.fonts.mono
                     }}
                     onFocus={(e) => {
@@ -1238,20 +1238,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   onClick={() => router.push(`/workflow/${params.id}`)}
                   className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: branding.colors.secondaryLight,
+                    backgroundColor: branding.colors.secondary,
                     color: branding.colors.textHeading,
-                    border: `2px solid ${branding.colors.divider}`,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    border: `2px solid ${branding.colors.accent}`,
+                    boxShadow: `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
-                    e.currentTarget.style.borderColor = branding.colors.accent
-                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.borderColor = branding.colors.accentLight
+                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.borderColor = branding.colors.divider
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
                   }}
                 >
                   ← Back to Workflow
@@ -1289,20 +1289,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   onClick={() => router.push('/dashboard')}
                   className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: branding.colors.secondaryLight,
+                    backgroundColor: branding.colors.secondary,
                     color: branding.colors.textHeading,
-                    border: `2px solid ${branding.colors.divider}`,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    border: `2px solid ${branding.colors.accent}`,
+                    boxShadow: `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
-                    e.currentTarget.style.borderColor = branding.colors.accent
-                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.borderColor = branding.colors.accentLight
+                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.borderColor = branding.colors.divider
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
                   }}
                 >
                   ← Back to Dashboard
@@ -1345,13 +1345,13 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             fontFamily: branding.fonts.heading
           }}>💡 What happens next?</h3>
           {planStatus !== 'approved' ? (
-            <ul className="space-y-2 text-sm" style={{ color: branding.colors.text }}>
+            <ul className="space-y-2 text-sm" style={{ color: branding.colors.textHeading }}>
               <li>• <strong style={{ color: branding.colors.textHeading }}>Edit:</strong> Modify the plan to match your exact requirements</li>
               <li>• <strong style={{ color: branding.colors.textHeading }}>Regenerate:</strong> Generate a fresh plan if you want a different approach</li>
               <li>• <strong style={{ color: branding.colors.textHeading }}>Approve:</strong> Lock in this plan so you can export the documentation files</li>
             </ul>
           ) : (
-            <ul className="space-y-2 text-sm" style={{ color: branding.colors.text }}>
+            <ul className="space-y-2 text-sm" style={{ color: branding.colors.textHeading }}>
               <li>✅ <strong style={{ color: branding.colors.success }}>Plan Approved!</strong> Your plan is ready for export</li>
               <li>• <strong style={{ color: branding.colors.textHeading }}>Export Files:</strong> Click the Export button to generate README, Claude instructions, and prompt files</li>
               <li>• <strong style={{ color: branding.colors.textHeading }}>Download:</strong> Files will be packaged as a ZIP and downloaded automatically</li>
