@@ -304,6 +304,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
       }
 
       console.log('[PREVIEW-PLAN] Plan approved successfully!')
+
+      // Verify the approval was saved by re-fetching
+      const { data: verifyPlan, error: verifyError } = await supabase
+        .from('plans')
+        .select('status')
+        .eq('id', planId)
+        .single()
+
+      if (verifyError || verifyPlan?.status !== 'approved') {
+        console.error('[PREVIEW-PLAN] Plan approval verification failed:', verifyError)
+        throw new Error('Failed to verify plan approval. Please try again.')
+      }
+
+      console.log('[PREVIEW-PLAN] Plan approval verified in database')
       setPlanStatus('approved')
     } catch (err) {
       console.error('[PREVIEW-PLAN] Failed to approve plan:', err)
