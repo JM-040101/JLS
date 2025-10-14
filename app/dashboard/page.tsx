@@ -6,6 +6,7 @@ import { Plus, FileText, Clock, CheckCircle, Archive, TrendingUp } from 'lucide-
 import UserMenu from '@/components/auth/user-menu'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { branding } from '@/branding.config'
+import DotGrid from '@/components/backgrounds/DotGrid'
 
 export default async function DashboardPage() {
   const user = await requireAuth()
@@ -30,7 +31,22 @@ export default async function DashboardPage() {
   const isAdmin = profile?.is_admin === true || profile?.role === 'admin' || profile?.role === 'superadmin'
 
   return (
-    <div className="min-h-screen" style={{ background: branding.colors.background }}>
+    <div className="min-h-screen relative" style={{ background: branding.colors.background }}>
+      {/* Dot Grid Background */}
+      <div className="fixed inset-0 z-0">
+        <DotGrid
+          dotSize={3}
+          gap={25}
+          baseColor={branding.colors.divider}
+          activeColor={branding.colors.accent}
+          proximity={120}
+          shockRadius={200}
+          shockStrength={3}
+        />
+      </div>
+
+      {/* Content Layer */}
+      <div className="relative z-10">
       {/* Header */}
       <header
         className="border-b"
@@ -343,6 +359,7 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
