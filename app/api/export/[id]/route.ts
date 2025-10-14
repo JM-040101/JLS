@@ -110,8 +110,13 @@ async function handleExport(sessionId: string) {
       }
 
       if (existingExport.status === 'failed') {
-        console.log('[EXPORT] Previous export failed, creating new one')
-        // Will create a new export below
+        console.log('[EXPORT] Previous export failed:', existingExport.error_message)
+        // Return the error message so user knows what went wrong
+        return NextResponse.json({
+          error: existingExport.error_message || 'Previous export failed. Please try again.',
+          status: 'failed',
+          exportId: existingExport.id
+        }, { status: 500 })
       }
     }
 
