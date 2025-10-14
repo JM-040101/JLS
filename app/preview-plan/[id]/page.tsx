@@ -290,9 +290,10 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         document.body.removeChild(a)
         console.log('[PREVIEW-PLAN] Export downloaded successfully!')
 
-        // Reset progress tracking on successful download
+        // Reset progress tracking and close dialog on successful download
         setExportStartTime(null)
         setExportProgress(100)
+        setExportInfo(null) // Close the export processing dialog
       } else {
         // Got a status message (still processing)
         const data = await response.json()
