@@ -340,11 +340,10 @@ export const generateExportFunction = inngest.createFunction(
         return exportFiles
       })
 
-      // Step 4: Store files in database
-      await step.run('save-export-files', async () => {
-        console.log('[INNGEST-EXPORT] Saving export files to database')
-
-        await supabase
+      // Step 4: Update to 95% before saving files
+      await step.run('update-to-95', async () => {
+        console.log('[INNGEST-EXPORT] Updating progress to 95%')
+        const { error } = await supabase
           .from('exports')
           .update({
             progress: 95,
@@ -353,7 +352,38 @@ export const generateExportFunction = inngest.createFunction(
           })
           .eq('id', exportId)
 
-        await supabase
+        if (error) {
+          console.error('[INNGEST-EXPORT] Failed to update to 95%:', error)
+          throw new Error(`Failed to update progress: ${error.message}`)
+        }
+      })
+
+      // Step 5: Validate file sizes before saving
+      await step.run('validate-file-sizes', async () => {
+        const filesJson = JSON.stringify(files)
+        const sizeInMB = filesJson.length / 1024 / 1024
+
+        console.log('[INNGEST-EXPORT] File sizes:', {
+          readme: files.readme?.length || 0,
+          claude: files.claude?.length || 0,
+          userInstructions: files.userInstructions?.length || 0,
+          quickStart: files.quickStart?.length || 0,
+          moduleCount: Object.keys(files.modules).length,
+          promptCount: Object.keys(files.prompts).length,
+          totalJsonSizeMB: sizeInMB.toFixed(2)
+        })
+
+        // JSONB column limit is typically 1GB, but we should keep it reasonable
+        if (sizeInMB > 50) {
+          console.warn('[INNGEST-EXPORT] WARNING: Files object is very large:', sizeInMB.toFixed(2), 'MB')
+        }
+      })
+
+      // Step 6: Save files and mark as completed
+      await step.run('save-export-files-and-complete', async () => {
+        console.log('[INNGEST-EXPORT] Saving export files and marking as completed')
+
+        const { error } = await supabase
           .from('exports')
           .update({
             status: 'completed',
@@ -364,6 +394,13 @@ export const generateExportFunction = inngest.createFunction(
             updated_at: new Date().toISOString()
           })
           .eq('id', exportId)
+
+        if (error) {
+          console.error('[INNGEST-EXPORT] Failed to save files and complete export:', error)
+          throw new Error(`Failed to save export: ${error.message}`)
+        }
+
+        console.log('[INNGEST-EXPORT] Export successfully saved to database')
       })
 
       console.log('[INNGEST-EXPORT] Export generation completed successfully!')
