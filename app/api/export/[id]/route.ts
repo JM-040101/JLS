@@ -110,13 +110,24 @@ async function handleExport(sessionId: string) {
       }
 
       if (existingExport.status === 'failed') {
-        console.log('[EXPORT] Previous export failed:', existingExport.error_message)
-        // Return the error message so user knows what went wrong
-        return NextResponse.json({
-          error: existingExport.error_message || 'Previous export failed. Please try again.',
-          status: 'failed',
-          exportId: existingExport.id
-        }, { status: 500 })
+        // Check if failed export is recent (< 5 minutes)
+        const createdAt = new Date(existingExport.created_at)
+        const now = new Date()
+        const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
+
+        if (ageMinutes < 5) {
+          // Recent failure - show the error
+          console.log('[EXPORT] Recent export failed (', ageMinutes.toFixed(1), 'minutes ago):', existingExport.error_message)
+          return NextResponse.json({
+            error: existingExport.error_message || 'Export failed. Please try again.',
+            status: 'failed',
+            exportId: existingExport.id
+          }, { status: 500 })
+        } else {
+          // Old failure - try again with new export
+          console.log('[EXPORT] Previous export failed', ageMinutes.toFixed(1), 'minutes ago, creating new one')
+          // Will create a new export below
+        }
       }
     }
 
