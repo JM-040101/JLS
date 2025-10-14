@@ -493,24 +493,20 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
     ]
 
-    // Generate modules individually (8 calls)
-    console.log('[CALL-HYBRID-GPT] Generating 8 modules individually...')
-    const moduleResults: Record<string, string> = {}
+    // Generate modules in parallel (8 calls simultaneously)
+    console.log('[CALL-HYBRID-GPT] Generating 8 modules in parallel...')
 
-    for (let i = 0; i < moduleSpecs.length; i++) {
-      const spec = moduleSpecs[i]
-      const progress = 20 + Math.round((i / (moduleSpecs.length + promptSpecs.length)) * 40)
+    await supabase
+      .from('exports')
+      .update({
+        progress: 25,
+        progress_message: 'Generating all 8 modules in parallel...',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exportId)
 
-      await supabase
-        .from('exports')
-        .update({
-          progress,
-          progress_message: `Generating module ${i + 1}/8: ${spec.name}...`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', exportId)
-
-      console.log(`[CALL-HYBRID-GPT] Generating module: ${spec.name}`)
+    const modulePromises = moduleSpecs.map(async (spec) => {
+      console.log(`[CALL-HYBRID-GPT] Starting module: ${spec.name}`)
 
       const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
 
@@ -551,32 +547,35 @@ ${buildingPlan}
 
       const content = moduleResponse.choices[0].message.content || ''
       const parsed = parseClaudeOutput(content)
-      if (parsed.modules[spec.name]) {
-        moduleResults[spec.name] = parsed.modules[spec.name]
-      } else {
-        console.warn(`[CALL-HYBRID-GPT] Failed to parse module: ${spec.name}`)
-        moduleResults[spec.name] = content
+
+      return {
+        name: spec.name,
+        content: parsed.modules[spec.name] || content
       }
-    }
+    })
 
-    // Generate prompts individually (9 calls)
-    console.log('[CALL-HYBRID-GPT] Generating 9 prompts individually...')
-    const promptResults: Record<string, string> = {}
+    const moduleResultsArray = await Promise.all(modulePromises)
+    const moduleResults: Record<string, string> = {}
+    moduleResultsArray.forEach(({ name, content }) => {
+      moduleResults[name] = content
+    })
 
-    for (let i = 0; i < promptSpecs.length; i++) {
-      const spec = promptSpecs[i]
-      const progress = 20 + Math.round(((moduleSpecs.length + i) / (moduleSpecs.length + promptSpecs.length)) * 40)
+    console.log('[CALL-HYBRID-GPT] All modules completed')
 
-      await supabase
-        .from('exports')
-        .update({
-          progress,
-          progress_message: `Generating prompt ${i + 1}/9: ${spec.num}-${spec.name}...`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', exportId)
+    // Generate prompts in parallel (9 calls simultaneously)
+    console.log('[CALL-HYBRID-GPT] Generating 9 prompts in parallel...')
 
-      console.log(`[CALL-HYBRID-GPT] Generating prompt: ${spec.num}-${spec.name}`)
+    await supabase
+      .from('exports')
+      .update({
+        progress: 45,
+        progress_message: 'Generating all 9 prompts in parallel...',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', exportId)
+
+    const promptPromises = promptSpecs.map(async (spec) => {
+      console.log(`[CALL-HYBRID-GPT] Starting prompt: ${spec.num}-${spec.name}`)
 
       const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
 
@@ -618,13 +617,20 @@ ${buildingPlan}
       const content = promptResponse.choices[0].message.content || ''
       const parsed = parseClaudeOutput(content)
       const promptKey = `${spec.num}-${spec.name}`
-      if (parsed.prompts[promptKey]) {
-        promptResults[promptKey] = parsed.prompts[promptKey]
-      } else {
-        console.warn(`[CALL-HYBRID-GPT] Failed to parse prompt: ${promptKey}`)
-        promptResults[promptKey] = content
+
+      return {
+        key: promptKey,
+        content: parsed.prompts[promptKey] || content
       }
-    }
+    })
+
+    const promptResultsArray = await Promise.all(promptPromises)
+    const promptResults: Record<string, string> = {}
+    promptResultsArray.forEach(({ key, content }) => {
+      promptResults[key] = content
+    })
+
+    console.log('[CALL-HYBRID-GPT] All prompts completed')
 
     // GPT-4 calls complete, now run Claude for core docs
     const [claudeDocsResult] = await Promise.all([
