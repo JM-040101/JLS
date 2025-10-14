@@ -32,10 +32,29 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [exportInfo, setExportInfo] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
   const [planStatus, setPlanStatus] = useState<string>('generated')
+  const [exportStartTime, setExportStartTime] = useState<number | null>(null)
+  const [exportProgress, setExportProgress] = useState(0)
 
   useEffect(() => {
     checkAuthAndGenerate()
   }, [params.id])
+
+  // Progress tracking effect - updates progress percentage based on elapsed time
+  useEffect(() => {
+    if (!exportStartTime || !exportInfo) return
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - exportStartTime
+      const minutes = elapsed / 1000 / 60
+
+      // Estimate progress based on 5-7 minute expected duration
+      // Use 6 minutes as the midpoint for calculation
+      const estimatedProgress = Math.min(95, (minutes / 6) * 100)
+      setExportProgress(estimatedProgress)
+    }, 500) // Update every 500ms for smooth progress
+
+    return () => clearInterval(interval)
+  }, [exportStartTime, exportInfo])
 
   async function checkAuthAndGenerate() {
     // Check authentication first
@@ -284,18 +303,38 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
         console.log('[PREVIEW-PLAN] Export downloaded successfully!')
+
+        // Reset progress tracking on successful download
+        setExportStartTime(null)
+        setExportProgress(100)
       } else {
         // Got a status message (still processing)
         const data = await response.json()
         console.log('[PREVIEW-PLAN] Export status:', data)
         setExportInfo(data.message || 'Export is being generated. Please try again in a moment.')
+
+        // Set start time if not already set
+        if (!exportStartTime) {
+          setExportStartTime(Date.now())
+          setExportProgress(0)
+        }
       }
     } catch (err) {
       console.error('[PREVIEW-PLAN] Export error:', err)
       setError(err instanceof Error ? err.message : 'Failed to export plan')
+      setExportStartTime(null)
     } finally {
       setIsExporting(false)
     }
+  }
+
+  // Helper function to format elapsed time
+  function formatElapsedTime(startTime: number | null): string {
+    if (!startTime) return '0m 0s'
+    const elapsed = Date.now() - startTime
+    const minutes = Math.floor(elapsed / 1000 / 60)
+    const seconds = Math.floor((elapsed / 1000) % 60)
+    return `${minutes}m ${seconds}s`
   }
 
   function cancelEditing() {
@@ -648,19 +687,32 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             <p className="text-sm leading-relaxed">{exportInfo}</p>
           </div>
 
-          {/* Animated progress indicator */}
+          {/* Progress bar with percentage */}
           <div className="mb-8">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm font-medium" style={{ color: branding.colors.textMuted }}>
+                Export Progress
+              </span>
+              <span className="text-lg font-bold" style={{ color: branding.colors.accent }}>
+                {Math.round(exportProgress)}%
+              </span>
+            </div>
             <div
-              className="h-2 rounded-full overflow-hidden"
+              className="h-3 rounded-full overflow-hidden mb-3"
               style={{ backgroundColor: branding.colors.primary }}
             >
               <div
-                className="h-2 rounded-full pulse-bar"
+                className="h-3 rounded-full transition-all duration-500"
                 style={{
+                  width: `${exportProgress}%`,
                   background: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
                   boxShadow: `0 0 10px ${branding.colors.accentGlow}`
                 }}
               ></div>
+            </div>
+            <div className="flex justify-between items-center text-xs" style={{ color: branding.colors.textMuted }}>
+              <span>Elapsed: {formatElapsedTime(exportStartTime)}</span>
+              <span>Estimated: 5-7 minutes</span>
             </div>
           </div>
 
@@ -803,25 +855,45 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen" style={{ background: branding.colors.background }}>
       <div className="max-w-5xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold mb-4" style={{
+            color: branding.colors.textHeading,
+            fontFamily: branding.fonts.heading
+          }}>
             📋 Your SaaS Building Plan
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg" style={{ color: branding.colors.text }}>
             Review and edit your plan before generating the final documentation
           </p>
         </div>
 
         {/* Plan Content */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
+        <div className="rounded-2xl overflow-hidden mb-8 border" style={{
+          backgroundColor: branding.colors.surface,
+          borderColor: branding.colors.divider,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+        }}>
           {!isEditing ? (
             <>
               {/* Plan Display with Beautiful Markdown Rendering */}
               <div className="p-8 sm:p-10 lg:p-12">
-                <article className="prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h1:border-blue-600 prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h2:border-blue-400 prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h3:text-gray-800 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-h4:text-gray-700 prose-p:leading-relaxed prose-p:text-gray-700 prose-p:mb-4 prose-strong:text-gray-900 prose-strong:font-semibold prose-code:text-pink-600 prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-pre:border-gray-700 prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-li:text-gray-700 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-blue-500 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:border-gray-300 prose-hr:my-8 prose-table:border-collapse prose-th:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2">
+                <article className="prose prose-lg prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-p:leading-relaxed prose-p:mb-4 prose-strong:font-semibold prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-a:no-underline hover:prose-a:underline prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:my-8 prose-table:border-collapse prose-th:border prose-th:px-4 prose-th:py-2 prose-td:border prose-td:px-4 prose-td:py-2" style={{
+                  '--tw-prose-body': branding.colors.text,
+                  '--tw-prose-headings': branding.colors.textHeading,
+                  '--tw-prose-bold': branding.colors.textHeading,
+                  '--tw-prose-code': branding.colors.accent,
+                  '--tw-prose-pre-bg': branding.colors.primary,
+                  '--tw-prose-pre-code': branding.colors.text,
+                  '--tw-prose-links': branding.colors.accent,
+                  '--tw-prose-quotes': branding.colors.textMuted,
+                  '--tw-prose-quote-borders': branding.colors.accent,
+                  '--tw-prose-hr': branding.colors.divider,
+                  '--tw-prose-th-borders': branding.colors.divider,
+                  '--tw-prose-td-borders': branding.colors.divider,
+                } as React.CSSProperties}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeHighlight, rehypeRaw]}
@@ -849,10 +921,29 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               </div>
 
               {/* Edit Button */}
-              <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
+              <div className="px-8 py-6 border-t" style={{
+                backgroundColor: branding.colors.primary,
+                borderColor: branding.colors.divider
+              }}>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-200"
+                  className="px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:-translate-y-0.5"
+                  style={{
+                    backgroundColor: branding.colors.secondary,
+                    color: branding.colors.text,
+                    border: `1px solid ${branding.colors.divider}`,
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 10px 15px -3px rgba(0, 0, 0, 0.5)`
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.borderColor = branding.colors.divider
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                  }}
                 >
                   ✏️ Edit Plan
                 </button>
@@ -863,16 +954,30 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               {/* Edit Mode */}
               <div className="p-6">
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: branding.colors.text }}>
                     Edit your building plan (Markdown supported)
                   </label>
                   <textarea
                     value={editedPlan}
                     onChange={(e) => setEditedPlan(e.target.value)}
-                    className="w-full h-[600px] p-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-y transition-colors"
+                    className="w-full h-[600px] p-4 border-2 rounded-lg focus:ring-2 font-mono text-sm resize-y transition-all"
+                    style={{
+                      backgroundColor: branding.colors.background,
+                      borderColor: branding.colors.divider,
+                      color: branding.colors.text,
+                      fontFamily: branding.fonts.mono
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = branding.colors.accent
+                      e.currentTarget.style.boxShadow = `0 0 0 3px ${branding.colors.accentGlow}`
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = branding.colors.divider
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                     placeholder="Edit your plan using Markdown formatting..."
                   />
-                  <p className="mt-2 text-sm text-gray-500">
+                  <p className="mt-2 text-sm" style={{ color: branding.colors.textMuted }}>
                     Tip: Use Markdown syntax for formatting (# headers, **bold**, `code`, etc.)
                   </p>
                 </div>
@@ -882,11 +987,17 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   <button
                     onClick={savePlanEdits}
                     disabled={isSaving}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 duration-200"
+                    className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    style={{
+                      background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                      color: branding.colors.background,
+                      border: `1px solid ${branding.colors.accent}`,
+                      boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+                    }}
                   >
                     {isSaving ? (
                       <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style={{ color: branding.colors.background }}>
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -899,7 +1010,18 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   <button
                     onClick={cancelEditing}
                     disabled={isSaving}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: branding.colors.secondary,
+                      color: branding.colors.text,
+                      border: `1px solid ${branding.colors.divider}`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    }}
                   >
                     Cancel
                   </button>
@@ -916,21 +1038,46 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               <div className="flex gap-4">
                 <button
                   onClick={() => router.push(`/workflow/${params.id}`)}
-                  className="flex-1 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+                  style={{
+                    backgroundColor: branding.colors.secondary,
+                    color: branding.colors.text,
+                    border: `1px solid ${branding.colors.divider}`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.borderColor = branding.colors.divider
+                  }}
                 >
                   ← Back to Workflow
                 </button>
                 <button
                   onClick={generatePlan}
                   disabled={isGenerating}
-                  className="flex-1 px-8 py-4 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{
+                    backgroundColor: branding.colors.warning,
+                    color: branding.colors.background,
+                    border: `1px solid ${branding.colors.warningDark}`,
+                    boxShadow: `0 0 15px ${branding.colors.warning}33`
+                  }}
                 >
                   {isGenerating ? 'Regenerating...' : '🔄 Regenerate Plan'}
                 </button>
                 <button
                   onClick={approvePlan}
                   disabled={isApproving}
-                  className="flex-1 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                    color: branding.colors.background,
+                    border: `1px solid ${branding.colors.accent}`,
+                    boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+                  }}
                 >
                   {isApproving ? 'Approving...' : '✅ Approve Plan'}
                 </button>
@@ -939,18 +1086,37 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               <div className="flex gap-4">
                 <button
                   onClick={() => router.push('/dashboard')}
-                  className="flex-1 px-8 py-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+                  style={{
+                    backgroundColor: branding.colors.secondary,
+                    color: branding.colors.text,
+                    border: `1px solid ${branding.colors.divider}`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = branding.colors.secondary
+                    e.currentTarget.style.borderColor = branding.colors.divider
+                  }}
                 >
                   ← Back to Dashboard
                 </button>
                 <button
                   onClick={handleExport}
                   disabled={isExporting}
-                  className="flex-1 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${branding.colors.success}, ${branding.colors.successLight})`,
+                    color: branding.colors.background,
+                    border: `1px solid ${branding.colors.successDark}`,
+                    boxShadow: `0 0 20px ${branding.colors.success}66`
+                  }}
                 >
                   {isExporting ? (
                     <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style={{ color: branding.colors.background }}>
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -966,19 +1132,25 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         )}
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">💡 What happens next?</h3>
+        <div className="mt-8 rounded-lg p-6 border" style={{
+          backgroundColor: `${branding.colors.info}15`,
+          borderColor: branding.colors.info
+        }}>
+          <h3 className="font-semibold mb-2" style={{
+            color: branding.colors.textHeading,
+            fontFamily: branding.fonts.heading
+          }}>💡 What happens next?</h3>
           {planStatus !== 'approved' ? (
-            <ul className="text-blue-800 space-y-2 text-sm">
-              <li>• <strong>Edit:</strong> Modify the plan to match your exact requirements</li>
-              <li>• <strong>Regenerate:</strong> Generate a fresh plan if you want a different approach</li>
-              <li>• <strong>Approve:</strong> Lock in this plan so you can export the documentation files</li>
+            <ul className="space-y-2 text-sm" style={{ color: branding.colors.text }}>
+              <li>• <strong style={{ color: branding.colors.textHeading }}>Edit:</strong> Modify the plan to match your exact requirements</li>
+              <li>• <strong style={{ color: branding.colors.textHeading }}>Regenerate:</strong> Generate a fresh plan if you want a different approach</li>
+              <li>• <strong style={{ color: branding.colors.textHeading }}>Approve:</strong> Lock in this plan so you can export the documentation files</li>
             </ul>
           ) : (
-            <ul className="text-blue-800 space-y-2 text-sm">
-              <li>✅ <strong>Plan Approved!</strong> Your plan is ready for export</li>
-              <li>• <strong>Export Files:</strong> Click the Export button to generate README, Claude instructions, and prompt files</li>
-              <li>• <strong>Download:</strong> Files will be packaged as a ZIP and downloaded automatically</li>
+            <ul className="space-y-2 text-sm" style={{ color: branding.colors.text }}>
+              <li>✅ <strong style={{ color: branding.colors.success }}>Plan Approved!</strong> Your plan is ready for export</li>
+              <li>• <strong style={{ color: branding.colors.textHeading }}>Export Files:</strong> Click the Export button to generate README, Claude instructions, and prompt files</li>
+              <li>• <strong style={{ color: branding.colors.textHeading }}>Download:</strong> Files will be packaged as a ZIP and downloaded automatically</li>
             </ul>
           )}
         </div>
