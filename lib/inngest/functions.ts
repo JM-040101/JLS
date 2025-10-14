@@ -506,7 +506,7 @@ ${buildingPlan}
         const modulesResponse = await openai.chat.completions.create({
           model: "gpt-4-turbo",
           messages: [{ role: "user", content: modulesPrompt }],
-          max_tokens: 12000,
+          max_tokens: 4096,
           temperature: 0.7
         })
 
@@ -564,7 +564,7 @@ ${buildingPlan}
         const promptsResponse = await openai.chat.completions.create({
           model: "gpt-4-turbo",
           messages: [{ role: "user", content: promptsPrompt }],
-          max_tokens: 14000,
+          max_tokens: 4096,
           temperature: 0.7
         })
 
