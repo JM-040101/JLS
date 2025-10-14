@@ -230,10 +230,16 @@ export default function QuestionForm({ question, value, onChange, disabled }: Qu
               </motion.p>
             )}
           </div>
-          <span className={`text-xs ${
-            value.length > question.validation.maxLength * 0.9
-              ? 'text-yellow-600'
-              : 'text-blueprint-navy-500'
+          <span className={`text-xs font-medium transition-colors ${
+            value.length > question.validation.maxLength
+              ? 'text-red-600' // Over limit
+              : value.length > question.validation.maxLength * 0.9
+              ? 'text-orange-600' // 90-100% (approaching limit)
+              : value.length > question.validation.maxLength * 0.8
+              ? 'text-yellow-600' // 80-90% (warning)
+              : value.length > question.validation.maxLength * 0.5
+              ? 'text-green-600' // 50-80% (good)
+              : 'text-blueprint-navy-400' // Under 50% (neutral)
           }`}>
             {value.length}/{question.validation.maxLength}
           </span>

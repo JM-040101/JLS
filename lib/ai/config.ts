@@ -3,23 +3,41 @@
 import { AIModel } from './types'
 
 export const AI_MODELS = {
-  GPT5: {
-    provider: 'openai',
-    model: 'gpt-5-turbo',
+  // Workflow Q&A - Haiku is 5x cheaper and BETTER at conversational tasks
+  WORKFLOW: {
+    provider: 'anthropic',
+    model: 'claude-3-5-haiku-20241022',
     maxTokens: 4000,
     temperature: 0.7
   } as AIModel,
-  
-  CLAUDE_SONNET: {
+
+  // Export generation - Sonnet 3.5 for quality technical content (50% cheaper than GPT-4)
+  EXPORT: {
     provider: 'anthropic',
     model: 'claude-3-5-sonnet-20241022',
     maxTokens: 8000,
     temperature: 0.3
   } as AIModel,
-  
+
+  // High-quality docs and plan processing - Sonnet 4 (newest, best quality)
+  CLAUDE_SONNET: {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-20250514',
+    maxTokens: 8000,
+    temperature: 0.3
+  } as AIModel,
+
+  // Legacy references (keep for backwards compatibility)
+  GPT5: {
+    provider: 'anthropic',
+    model: 'claude-3-5-haiku-20241022',
+    maxTokens: 4000,
+    temperature: 0.7
+  } as AIModel,
+
   GPT4_BACKUP: {
-    provider: 'openai',
-    model: 'gpt-4-turbo-preview',
+    provider: 'anthropic',
+    model: 'claude-3-5-haiku-20241022',
     maxTokens: 4000,
     temperature: 0.7
   } as AIModel
@@ -44,17 +62,26 @@ export const RATE_LIMITS = {
 }
 
 export const COST_PER_TOKEN = {
-  'gpt-5-turbo': {
-    input: 0.00003,
-    output: 0.00006
-  },
-  'gpt-4-turbo-preview': {
-    input: 0.00001,
-    output: 0.00003
+  'claude-3-5-haiku-20241022': {
+    input: 0.001 / 1000,    // $1.00 per million tokens
+    output: 0.005 / 1000     // $5.00 per million tokens
   },
   'claude-3-5-sonnet-20241022': {
-    input: 0.000003,
-    output: 0.000015
+    input: 0.003 / 1000,     // $3.00 per million tokens
+    output: 0.015 / 1000     // $15.00 per million tokens
+  },
+  'claude-sonnet-4-20250514': {
+    input: 0.003 / 1000,     // $3.00 per million tokens
+    output: 0.015 / 1000     // $15.00 per million tokens
+  },
+  // Legacy (redirected to Haiku)
+  'gpt-5-turbo': {
+    input: 0.001 / 1000,
+    output: 0.005 / 1000
+  },
+  'gpt-4-turbo-preview': {
+    input: 0.001 / 1000,
+    output: 0.005 / 1000
   }
 }
 

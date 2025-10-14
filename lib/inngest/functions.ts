@@ -452,25 +452,18 @@ async function runInBatches<T>(
   return results
 }
 
-// Hybrid call function - GPT-4 (fast, structured) + Claude (quality, narrative) - SPLIT into individual calls
+// Hybrid call function - Claude Sonnet 3.5 (fast, cost-effective) + Sonnet 4 (quality docs)
 async function callHybridForExportInParts(buildingPlan: string, exportId: string, supabase: any) {
-  console.log('[CALL-HYBRID] Starting hybrid export generation (GPT-4 individual calls + Claude)')
+  console.log('[CALL-HYBRID-SONNET] Starting hybrid export generation (Sonnet 3.5 for files + Sonnet 4 for docs)')
 
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       throw new Error('Anthropic API key not configured')
     }
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured')
-    }
 
     const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
-    })
-
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 120000, // 2 minutes max per API call
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      timeout: 180000, // 3 minutes max per API call
       maxRetries: 2 // Retry twice on failures
     })
 
@@ -484,12 +477,12 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       'utf-8'
     )
 
-    console.log('[CALL-HYBRID] Starting generation...')
+    console.log('[CALL-HYBRID-SONNET] Starting generation...')
     await supabase
       .from('exports')
       .update({
         progress: 20,
-        progress_message: 'Generating files individually for completeness...',
+        progress_message: 'Generating 21 files with Claude Sonnet (2-3 min)...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -521,14 +514,14 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       { num: '09', name: 'deploy', desc: 'Context, deployment architecture, Vercel setup, environment variables, production migrations, domain/SSL, monitoring, rollback, post-deployment checklist, maintenance' }
     ]
 
-    // Generate modules in batches (4 at a time to avoid rate limits)
-    console.log('[CALL-HYBRID-GPT] Generating 8 modules in batches of 4...')
+    // Generate modules in batches (8 at a time - Claude has better rate limits)
+    console.log('[CALL-HYBRID-SONNET] Generating 8 modules in batches of 8...')
 
     await supabase
       .from('exports')
       .update({
         progress: 25,
-        progress_message: 'Generating 8 modules (4 at a time)...',
+        progress_message: 'Generating 8 modules in one batch...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -539,8 +532,8 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
 
     const moduleResultsArray = await runInBatches(
       moduleSpecs,
-      4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
-      60000, // Wait 60 seconds between batches (rate limit resets per minute)
+      8, // Batch size: 8 calls at a time (all modules in one batch)
+      10000, // Wait 10 seconds between batches
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate
@@ -548,7 +541,7 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
           throw new Error(`Export stuck at module generation for ${Math.round(timeSinceLastUpdate / 1000)}s`)
         }
 
-        console.log(`[CALL-HYBRID-GPT] Generating module ${index + 1}/${moduleSpecs.length}: ${spec.name}`)
+        console.log(`[CALL-HYBRID-SONNET] Generating module ${index + 1}/${moduleSpecs.length}: ${spec.name}`)
 
         const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
 
@@ -575,15 +568,14 @@ ${buildingPlan}
 
 **Write COMPLETE module with ALL code examples. DO NOT truncate.**`
 
-        const moduleResponse = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [{ role: "user", content: modulePrompt }],
+        const moduleResponse = await anthropic.messages.create({
+          model: "claude-3-5-sonnet-20241022",
           max_tokens: 4096,
-          temperature: 0.7
+          messages: [{ role: "user", content: modulePrompt }]
         })
 
-        console.log(`[CALL-HYBRID-GPT] Module ${spec.name} completed:`, {
-          finishReason: moduleResponse.choices[0].finish_reason,
+        console.log(`[CALL-HYBRID-SONNET] Module ${spec.name} completed:`, {
+          stopReason: moduleResponse.stop_reason,
           tokensUsed: moduleResponse.usage
         })
 
@@ -600,7 +592,8 @@ ${buildingPlan}
 
         lastProgressUpdate = Date.now() // Reset timeout tracker
 
-        const content = moduleResponse.choices[0].message.content || ''
+        const firstBlock = moduleResponse.content[0]
+        const content = firstBlock?.type === 'text' ? firstBlock.text : ''
         const parsed = parseClaudeOutput(content)
 
         return {
@@ -615,16 +608,16 @@ ${buildingPlan}
       moduleResults[name] = content
     })
 
-    console.log('[CALL-HYBRID-GPT] All modules completed')
+    console.log('[CALL-HYBRID-SONNET] All modules completed')
 
-    // Generate prompts in batches (4 at a time to avoid rate limits)
-    console.log('[CALL-HYBRID-GPT] Generating 9 prompts in batches of 4...')
+    // Generate prompts in batches (9 at a time - Claude can handle it)
+    console.log('[CALL-HYBRID-SONNET] Generating 9 prompts in batches of 9...')
 
     await supabase
       .from('exports')
       .update({
         progress: 45,
-        progress_message: 'Generating 9 prompts (4 at a time)...',
+        progress_message: 'Generating 9 prompts in one batch...',
         updated_at: new Date().toISOString()
       })
       .eq('id', exportId)
@@ -634,8 +627,8 @@ ${buildingPlan}
 
     const promptResultsArray = await runInBatches(
       promptSpecs,
-      4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
-      60000, // Wait 60 seconds between batches
+      9, // Batch size: 9 calls at a time (all prompts in one batch)
+      10000, // Wait 10 seconds between batches
       async (spec, index) => {
         // Check if stuck (no progress update for >3 minutes)
         const timeSinceLastUpdate = Date.now() - lastProgressUpdate
@@ -643,7 +636,7 @@ ${buildingPlan}
           throw new Error(`Export stuck at prompt generation for ${Math.round(timeSinceLastUpdate / 1000)}s`)
         }
 
-        console.log(`[CALL-HYBRID-GPT] Generating prompt ${index + 1}/${promptSpecs.length}: ${spec.num}-${spec.name}`)
+        console.log(`[CALL-HYBRID-SONNET] Generating prompt ${index + 1}/${promptSpecs.length}: ${spec.num}-${spec.name}`)
 
         const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
 
@@ -670,15 +663,14 @@ ${buildingPlan}
 
 **Write COMPLETE prompt with ALL code examples. DO NOT truncate.**`
 
-        const promptResponse = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [{ role: "user", content: promptPrompt }],
+        const promptResponse = await anthropic.messages.create({
+          model: "claude-3-5-sonnet-20241022",
           max_tokens: 4096,
-          temperature: 0.7
+          messages: [{ role: "user", content: promptPrompt }]
         })
 
-        console.log(`[CALL-HYBRID-GPT] Prompt ${spec.num}-${spec.name} completed:`, {
-          finishReason: promptResponse.choices[0].finish_reason,
+        console.log(`[CALL-HYBRID-SONNET] Prompt ${spec.num}-${spec.name} completed:`, {
+          stopReason: promptResponse.stop_reason,
           tokensUsed: promptResponse.usage
         })
 
@@ -695,7 +687,8 @@ ${buildingPlan}
 
         lastProgressUpdate = Date.now() // Reset timeout tracker
 
-        const content = promptResponse.choices[0].message.content || ''
+        const firstBlock = promptResponse.content[0]
+        const content = firstBlock?.type === 'text' ? firstBlock.text : ''
         const parsed = parseClaudeOutput(content)
         const promptKey = `${spec.num}-${spec.name}`
 
@@ -711,14 +704,14 @@ ${buildingPlan}
       promptResults[key] = content
     })
 
-    console.log('[CALL-HYBRID-GPT] All prompts completed')
+    console.log('[CALL-HYBRID-SONNET] All prompts completed')
 
-    // GPT-4 calls complete, now run Claude for core docs
+    // Sonnet 3.5 calls complete, now run Sonnet 4 for core docs
     const [claudeDocsResult] = await Promise.all([
 
-      // Claude Call: Generate 4 core documentation files (quality, narrative)
+      // Claude Sonnet 4: Generate 4 core documentation files (quality, narrative)
       (async () => {
-        console.log('[CALL-HYBRID-CLAUDE] Generating 4 core documentation files...')
+        console.log('[CALL-HYBRID-SONNET4] Generating 4 core documentation files...')
         const docsPrompt = `You are an expert technical writer. Generate 4 COMPLETE, COMPREHENSIVE, POLISHED documentation files. These are the most important user-facing docs, so quality is critical.
 
 **CRITICAL INSTRUCTIONS:**
@@ -800,13 +793,13 @@ ${buildingPlan}
           messages: [{ role: "user", content: docsPrompt }]
         })
 
-        console.log('[CALL-HYBRID-CLAUDE] Docs completed:', {
+        console.log('[CALL-HYBRID-SONNET4] Docs completed:', {
           stopReason: docsResponse.stop_reason,
           tokensUsed: docsResponse.usage
         })
 
         if (docsResponse.stop_reason === 'max_tokens') {
-          console.warn('[CALL-HYBRID-CLAUDE] WARNING: Hit max_tokens - docs may be incomplete')
+          console.warn('[CALL-HYBRID-SONNET4] WARNING: Hit max_tokens - docs may be incomplete')
         }
 
         await supabase
@@ -824,10 +817,10 @@ ${buildingPlan}
 
     const endTime = Date.now()
     const totalDuration = ((endTime - startTime) / 1000).toFixed(2)
-    console.log(`[CALL-HYBRID] All sequential calls completed in ${totalDuration}s`)
+    console.log(`[CALL-HYBRID-SONNET] All calls completed in ${totalDuration}s (17 Sonnet 3.5 + 1 Sonnet 4)`)
 
     // Parse Claude response
-    console.log('[CALL-HYBRID] Parsing Claude response...')
+    console.log('[CALL-HYBRID-SONNET] Parsing responses...')
     await supabase
       .from('exports')
       .update({

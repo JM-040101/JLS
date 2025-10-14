@@ -10,23 +10,56 @@ interface WorkflowHeaderProps {
 }
 
 export default function WorkflowHeader({ sessionName, isSaving, onExit }: WorkflowHeaderProps) {
-  const [timeSpent, setTimeSpent] = useState(0)
+  const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
+  const [showSaved, setShowSaved] = useState(false)
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
+
+  const handleExit = () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to exit?\n\nYour progress is automatically saved, but you will leave this workflow session.'
+    )
+    if (confirmed) {
+      onExit()
+    }
+  }
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeSpent(prev => prev + 1)
-    }, 60000) // Update every minute
+      setTimeSpentSeconds(prev => prev + 1)
+    }, 1000) // Update every second
 
     return () => clearInterval(timer)
   }, [])
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    if (hours > 0) {
-      return `${hours}h ${mins}m`
+  // Show "Saved ✓" indicator for 2 seconds after saving completes
+  useEffect(() => {
+    if (!isSaving && lastSavedTime) {
+      setShowSaved(true)
+      const timer = setTimeout(() => {
+        setShowSaved(false)
+      }, 2000)
+      return () => clearTimeout(timer)
     }
-    return `${mins}m`
+  }, [isSaving, lastSavedTime])
+
+  // Track when saving completes
+  useEffect(() => {
+    if (!isSaving) {
+      setLastSavedTime(new Date())
+    }
+  }, [isSaving])
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`
+    }
+    return `${secs}s`
   }
 
   return (
@@ -39,20 +72,27 @@ export default function WorkflowHeader({ sessionName, isSaving, onExit }: Workfl
             </h1>
             <div className="flex items-center text-sm text-blueprint-navy-600">
               <Clock className="w-4 h-4 mr-1" />
-              {formatTime(timeSpent)}
+              {formatTime(timeSpentSeconds)}
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
-            {isSaving && (
+            {isSaving ? (
               <div className="flex items-center text-sm text-blueprint-cyan-600">
                 <Save className="w-4 h-4 mr-1 animate-pulse" />
                 Saving...
               </div>
-            )}
-            
+            ) : showSaved ? (
+              <div className="flex items-center text-sm text-green-600 transition-opacity duration-300">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Saved
+              </div>
+            ) : null}
+
             <button
-              onClick={onExit}
+              onClick={handleExit}
               className="btn-ghost flex items-center"
               title="Save and exit"
             >
