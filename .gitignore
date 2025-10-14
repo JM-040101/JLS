@@ -34,6 +34,9 @@ yarn-error.log*
 !.env.local.example
 !.env.test.example
 
+# test credentials - NEVER COMMIT
+.claude-test-credentials
+
 # vercel
 .vercel
 

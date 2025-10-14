@@ -49,37 +49,50 @@ async function handleExport(sessionId: string) {
       }, { status: 400 })
     }
 
-    // 3. Check if there's currently a processing export (avoid duplicates)
-    const { data: existingExport } = await supabase
+    // 3. Check for ANY processing exports (avoid duplicates) - ENHANCED with better locking
+    const { data: processingExports, count } = await supabase
       .from('exports')
-      .select('id, status, files, progress, progress_message, error_message, created_at')
+      .select('id, status, progress, progress_message, error_message, created_at', { count: 'exact' })
       .eq('session_id', sessionId)
       .eq('status', 'processing')
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
 
-    if (existingExport) {
+    console.log('[EXPORT] Found', count, 'processing exports for session:', sessionId)
+
+    if (processingExports && processingExports.length > 0) {
+      // Get the most recent processing export
+      const existingExport = processingExports[0]
+
       // Check if export is stale (> 15 minutes old)
       const createdAt = new Date(existingExport.created_at)
       const now = new Date()
       const ageMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
 
       if (ageMinutes > 15) {
-        // Export is stale (stuck), mark as failed and create new one
-        console.log('[EXPORT] Export is stale (', ageMinutes.toFixed(1), 'minutes old), marking as failed and creating new one')
-        await supabase
-          .from('exports')
-          .update({
-            status: 'failed',
-            error_message: 'Export timed out after 15 minutes. Please try again.',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingExport.id)
+        // Export is stale (stuck), mark ALL processing exports as failed and create new one
+        console.log('[EXPORT] Found', processingExports.length, 'stale exports (oldest is', ageMinutes.toFixed(1), 'minutes old), marking all as failed')
+
+        // Mark all processing exports as failed (cleanup duplicate exports)
+        for (const exp of processingExports) {
+          await supabase
+            .from('exports')
+            .update({
+              status: 'failed',
+              error_message: 'Export timed out after 15 minutes. Please try again.',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', exp.id)
+        }
         // Will create a new export below
       } else {
-        // Export is recent and actively processing
+        // Export is recent and actively processing - return existing
         console.log('[EXPORT] Export is still processing:', existingExport.id, 'Progress:', existingExport.progress, 'Age:', ageMinutes.toFixed(1), 'minutes')
+
+        // If multiple processing exports exist (shouldn't happen but let's handle it), log warning
+        if (processingExports.length > 1) {
+          console.warn('[EXPORT] WARNING: Found', processingExports.length, 'simultaneous processing exports! This indicates a race condition.')
+        }
+
         return NextResponse.json({
           message: existingExport.progress_message || 'Export is being generated. This takes 5-7 minutes with individual file generation for completeness.',
           status: 'processing',

@@ -34,10 +34,69 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   const [planStatus, setPlanStatus] = useState<string>('generated')
   const [exportStartTime, setExportStartTime] = useState<number | null>(null)
   const [exportProgress, setExportProgress] = useState(0)
+  const [currentExportId, setCurrentExportId] = useState<string | null>(null)
+  const [exportStatus, setExportStatus] = useState<'processing' | 'completed' | 'failed' | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
     checkAuthAndGenerate()
   }, [params.id])
+
+  // Auto-poll export status every 10 seconds when export is processing
+  useEffect(() => {
+    if (!currentExportId || exportStatus === 'completed' || exportStatus === 'failed') {
+      return
+    }
+
+    console.log('[PREVIEW-PLAN] Starting auto-poll for export:', currentExportId)
+
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log('[PREVIEW-PLAN] Auto-polling export status...')
+        const response = await fetch(`/api/export/status/${currentExportId}`)
+
+        if (!response.ok) {
+          console.error('[PREVIEW-PLAN] Error polling export status')
+          return
+        }
+
+        const data = await response.json()
+        console.log('[PREVIEW-PLAN] Export status update:', data)
+
+        // Update all state from response
+        setExportProgress(data.progress || 0)
+        setExportStatus(data.status)
+        setExportInfo(data.progress_message || 'Processing...')
+
+        if (data.error_message) {
+          setExportError(data.error_message)
+        }
+
+        // If completed, trigger download
+        if (data.status === 'completed' && data.files) {
+          console.log('[PREVIEW-PLAN] Export completed! Triggering download...')
+          clearInterval(pollInterval)
+          await downloadExportFiles(currentExportId)
+        }
+
+        // If failed, show error
+        if (data.status === 'failed') {
+          console.error('[PREVIEW-PLAN] Export failed:', data.error_message)
+          clearInterval(pollInterval)
+          setExportError(data.error_message || 'Export failed')
+        }
+
+      } catch (err) {
+        console.error('[PREVIEW-PLAN] Error during auto-poll:', err)
+      }
+    }, 10000) // Poll every 10 seconds
+
+    // Cleanup interval on unmount or when export completes
+    return () => {
+      console.log('[PREVIEW-PLAN] Stopping auto-poll')
+      clearInterval(pollInterval)
+    }
+  }, [currentExportId, exportStatus])
 
   // Note: Progress is now tracked by backend, no need for time-based estimation
   // The progress bar updates based on real backend progress milestones
@@ -263,8 +322,9 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
       console.log('[PREVIEW-PLAN] Starting export for session:', params.id)
       setIsExporting(true)
       setError(null)
+      setExportError(null)
 
-      // Call the export API endpoint
+      // Call the export API endpoint (creates export or returns existing processing one)
       const response = await fetch(`/api/export/${params.id}`, {
         method: 'GET',
       })
@@ -274,49 +334,61 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
         throw new Error(data.error || 'Failed to generate export')
       }
 
-      // Check if we got a ZIP file or a status message
-      const contentType = response.headers.get('content-type')
+      const data = await response.json()
+      console.log('[PREVIEW-PLAN] Export response:', data)
 
-      if (contentType === 'application/zip') {
-        // Download the ZIP file
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'saas-blueprint.zip'
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        console.log('[PREVIEW-PLAN] Export downloaded successfully!')
-
-        // Reset progress tracking and close dialog on successful download
-        setExportStartTime(null)
-        setExportProgress(100)
-        setExportInfo(null) // Close the export processing dialog
-      } else {
-        // Got a status message (still processing)
-        const data = await response.json()
-        console.log('[PREVIEW-PLAN] Export status:', data)
-        setExportInfo(data.message || 'Export is being generated. Please try again in a moment.')
-
-        // Update progress from backend (real progress tracking!)
-        if (data.progress !== undefined) {
-          setExportProgress(data.progress)
-          console.log('[PREVIEW-PLAN] Real backend progress:', data.progress + '%')
-        }
-
-        // Set start time if not already set (for elapsed time display)
-        if (!exportStartTime) {
-          setExportStartTime(Date.now())
-        }
+      // Set the export ID and status to trigger auto-polling
+      if (data.exportId) {
+        setCurrentExportId(data.exportId)
+        setExportStatus(data.status || 'processing')
+        setExportProgress(data.progress || 0)
+        setExportInfo(data.message || 'Export is being generated...')
+        setExportStartTime(Date.now())
       }
+
     } catch (err) {
       console.error('[PREVIEW-PLAN] Export error:', err)
       setError(err instanceof Error ? err.message : 'Failed to export plan')
       setExportStartTime(null)
+      setExportInfo(null)
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  async function downloadExportFiles(exportId: string) {
+    try {
+      console.log('[PREVIEW-PLAN] Downloading export files:', exportId)
+
+      // Call the download endpoint
+      const response = await fetch(`/api/export/download/${exportId}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to download export files')
+      }
+
+      // Download the ZIP file
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'saas-blueprint.zip'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      console.log('[PREVIEW-PLAN] Export downloaded successfully!')
+
+      // Reset state and close dialog
+      setExportStartTime(null)
+      setExportProgress(100)
+      setExportInfo(null)
+      setCurrentExportId(null)
+      setExportStatus('completed')
+
+    } catch (err) {
+      console.error('[PREVIEW-PLAN] Download error:', err)
+      setExportError(err instanceof Error ? err.message : 'Failed to download export')
     }
   }
 
@@ -626,18 +698,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           className="max-w-lg w-full rounded-2xl p-8 relative z-10 backdrop-blur-sm border"
           style={{
             backgroundColor: `${branding.colors.surface}EE`,
-            borderColor: branding.colors.divider,
-            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.5), 0 0 50px ${branding.colors.accentGlow}`
+            borderColor: exportStatus === 'failed' ? branding.colors.error : branding.colors.divider,
+            boxShadow: exportStatus === 'failed'
+              ? `0 20px 50px rgba(0, 0, 0, 0.5), 0 0 50px ${branding.colors.error}66`
+              : `0 20px 50px rgba(0, 0, 0, 0.5), 0 0 50px ${branding.colors.accentGlow}`
           }}
         >
-          {/* Animated hourglass icon */}
+          {/* Animated icon - changes based on status */}
           <div className="flex justify-center mb-6">
             <div className="relative">
               {/* Glow effect */}
               <div
                 className="absolute inset-0 rounded-full blur-2xl animate-pulse"
                 style={{
-                  background: branding.colors.accentGlow,
+                  background: exportStatus === 'failed' ? `${branding.colors.error}66` : branding.colors.accentGlow,
                   transform: 'scale(1.5)'
                 }}
               ></div>
@@ -647,11 +721,21 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                 className="relative w-20 h-20 rounded-full flex items-center justify-center border-2"
                 style={{
                   backgroundColor: branding.colors.primary,
-                  borderColor: branding.colors.accent,
-                  boxShadow: `0 0 30px ${branding.colors.accentGlow}`
+                  borderColor: exportStatus === 'failed' ? branding.colors.error : branding.colors.accent,
+                  boxShadow: exportStatus === 'failed'
+                    ? `0 0 30px ${branding.colors.error}66`
+                    : `0 0 30px ${branding.colors.accentGlow}`
                 }}
               >
-                <span className="text-5xl animate-pulse" style={{ color: branding.colors.accent }}>⏳</span>
+                <span
+                  className={exportStatus === 'failed' ? '' : 'animate-pulse'}
+                  style={{
+                    fontSize: '3rem',
+                    color: exportStatus === 'failed' ? branding.colors.error : branding.colors.accent
+                  }}
+                >
+                  {exportStatus === 'failed' ? '❌' : '⏳'}
+                </span>
               </div>
             </div>
           </div>
@@ -660,25 +744,68 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           <h2
             className="text-3xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-to-r"
             style={{
-              backgroundImage: `linear-gradient(135deg, ${branding.colors.textHeading} 0%, ${branding.colors.accent} 100%)`,
+              backgroundImage: exportStatus === 'failed'
+                ? `linear-gradient(135deg, ${branding.colors.error} 0%, ${branding.colors.error} 100%)`
+                : `linear-gradient(135deg, ${branding.colors.textHeading} 0%, ${branding.colors.accent} 100%)`,
               fontFamily: branding.fonts.heading
             }}
           >
-            Export Processing
+            {exportStatus === 'failed' ? 'Export Failed' : 'Export Processing'}
           </h2>
 
-          {/* Message with info styling */}
-          <div
-            className="mb-6 p-4 rounded-lg border"
-            style={{
-              backgroundColor: branding.colors.primary,
-              borderColor: branding.colors.info,
-              color: branding.colors.text
-            }}
-          >
-            <p className="text-sm leading-relaxed font-medium">{exportInfo}</p>
-            <p className="text-xs mt-2 opacity-75">Using hybrid AI processing (GPT-4 + Claude in parallel)</p>
-          </div>
+          {/* Message with conditional styling based on status */}
+          {exportStatus === 'failed' && exportError ? (
+            <div
+              className="mb-6 p-4 rounded-lg border"
+              style={{
+                backgroundColor: `${branding.colors.error}15`,
+                borderColor: branding.colors.error,
+                color: branding.colors.text
+              }}
+            >
+              <p className="text-sm leading-relaxed font-medium mb-2" style={{ color: branding.colors.error }}>
+                {exportError}
+              </p>
+              {exportError.includes('billing') || exportError.includes('account is not active') ? (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: branding.colors.error }}>
+                  <p className="text-xs mb-2" style={{ color: branding.colors.text }}>
+                    <strong>Action Required:</strong> This appears to be an OpenAI billing issue.
+                  </p>
+                  <a
+                    href="https://platform.openai.com/account/billing/overview"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: branding.colors.error,
+                      color: branding.colors.background,
+                      textDecoration: 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.8'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                  >
+                    Check OpenAI Billing →
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              className="mb-6 p-4 rounded-lg border"
+              style={{
+                backgroundColor: branding.colors.primary,
+                borderColor: branding.colors.info,
+                color: branding.colors.text
+              }}
+            >
+              <p className="text-sm leading-relaxed font-medium">{exportInfo}</p>
+              <p className="text-xs mt-2 opacity-75">Using hybrid AI processing (GPT-4 + Claude in parallel)</p>
+            </div>
+          )}
 
           {/* Progress bar with percentage */}
           <div className="mb-8">
@@ -712,7 +839,14 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           {/* Action buttons */}
           <div className="flex gap-3">
             <button
-              onClick={() => setExportInfo(null)}
+              onClick={() => {
+                setExportInfo(null)
+                setCurrentExportId(null)
+                setExportStatus(null)
+                setExportError(null)
+                setExportProgress(0)
+                setExportStartTime(null)
+              }}
               className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200"
               style={{
                 backgroundColor: branding.colors.secondary,
@@ -730,14 +864,64 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             >
               Close
             </button>
+
+            {exportStatus === 'failed' ? (
+              <button
+                onClick={async () => {
+                  // Reset state and retry export
+                  setExportInfo(null)
+                  setCurrentExportId(null)
+                  setExportStatus(null)
+                  setExportError(null)
+                  setExportProgress(0)
+                  setExportStartTime(null)
+                  await handleExport()
+                }}
+                className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                style={{
+                  background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                  color: branding.colors.background,
+                  border: `1px solid ${branding.colors.accent}`,
+                  boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+                }}
+              >
+                Try Again
+              </button>
+            ) :
             <button
               onClick={async () => {
+                if (!currentExportId) return
+
                 setIsCheckingStatus(true)
-                // Don't close the modal - just check status and update progress
-                await handleExport()
-                setIsCheckingStatus(false)
+                try {
+                  // Call STATUS endpoint (READ ONLY - never creates new export)
+                  const response = await fetch(`/api/export/status/${currentExportId}`)
+
+                  if (response.ok) {
+                    const data = await response.json()
+                    console.log('[PREVIEW-PLAN] Manual status check:', data)
+
+                    // Update state from response
+                    setExportProgress(data.progress || 0)
+                    setExportStatus(data.status)
+                    setExportInfo(data.progress_message || 'Processing...')
+
+                    if (data.error_message) {
+                      setExportError(data.error_message)
+                    }
+
+                    // If completed, trigger download
+                    if (data.status === 'completed' && data.files) {
+                      await downloadExportFiles(currentExportId)
+                    }
+                  }
+                } catch (err) {
+                  console.error('[PREVIEW-PLAN] Error checking status:', err)
+                } finally {
+                  setIsCheckingStatus(false)
+                }
               }}
-              disabled={isCheckingStatus}
+              disabled={isCheckingStatus || !currentExportId}
               className="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-200 glow-button"
               style={{
                 background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,

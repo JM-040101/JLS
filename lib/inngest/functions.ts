@@ -429,7 +429,7 @@ async function runInBatches<T>(
   items: T[],
   batchSize: number,
   delayMs: number,
-  processFn: (item: T) => Promise<any>
+  processFn: (item: T, index: number) => Promise<any>
 ): Promise<any[]> {
   const results: any[] = []
 
@@ -437,7 +437,9 @@ async function runInBatches<T>(
     const batch = items.slice(i, i + batchSize)
     console.log(`[BATCH] Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)} (${batch.length} items)`)
 
-    const batchResults = await Promise.all(batch.map(processFn))
+    const batchResults = await Promise.all(
+      batch.map((item, batchIndex) => processFn(item, i + batchIndex))
+    )
     results.push(...batchResults)
 
     // Wait between batches (except after the last batch)
@@ -531,12 +533,22 @@ async function callHybridForExportInParts(buildingPlan: string, exportId: string
       })
       .eq('id', exportId)
 
+    // Track progress update time for timeout detection
+    let lastProgressUpdate = Date.now()
+    const progressTimeout = 180000 // 3 minutes = 180000ms
+
     const moduleResultsArray = await runInBatches(
       moduleSpecs,
       4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
       60000, // Wait 60 seconds between batches (rate limit resets per minute)
-      async (spec) => {
-        console.log(`[CALL-HYBRID-GPT] Generating module: ${spec.name}`)
+      async (spec, index) => {
+        // Check if stuck (no progress update for >3 minutes)
+        const timeSinceLastUpdate = Date.now() - lastProgressUpdate
+        if (timeSinceLastUpdate > progressTimeout) {
+          throw new Error(`Export stuck at module generation for ${Math.round(timeSinceLastUpdate / 1000)}s`)
+        }
+
+        console.log(`[CALL-HYBRID-GPT] Generating module ${index + 1}/${moduleSpecs.length}: ${spec.name}`)
 
         const modulePrompt = `You are an expert software architect. Generate ONE COMPLETE, DETAILED module README file.
 
@@ -575,6 +587,19 @@ ${buildingPlan}
           tokensUsed: moduleResponse.usage
         })
 
+        // Update progress in database with more granular progress
+        const progressPercent = 25 + Math.round((index + 1) / moduleSpecs.length * 15) // 25-40%
+        await supabase
+          .from('exports')
+          .update({
+            progress: progressPercent,
+            progress_message: `Generated module ${index + 1}/${moduleSpecs.length}: ${spec.name}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
+        lastProgressUpdate = Date.now() // Reset timeout tracker
+
         const content = moduleResponse.choices[0].message.content || ''
         const parsed = parseClaudeOutput(content)
 
@@ -604,12 +629,21 @@ ${buildingPlan}
       })
       .eq('id', exportId)
 
+    // Reset timeout tracker for prompt generation
+    lastProgressUpdate = Date.now()
+
     const promptResultsArray = await runInBatches(
       promptSpecs,
       4, // Batch size: 4 calls at a time (4 × 7k tokens = 28k < 30k limit)
       60000, // Wait 60 seconds between batches
-      async (spec) => {
-        console.log(`[CALL-HYBRID-GPT] Generating prompt: ${spec.num}-${spec.name}`)
+      async (spec, index) => {
+        // Check if stuck (no progress update for >3 minutes)
+        const timeSinceLastUpdate = Date.now() - lastProgressUpdate
+        if (timeSinceLastUpdate > progressTimeout) {
+          throw new Error(`Export stuck at prompt generation for ${Math.round(timeSinceLastUpdate / 1000)}s`)
+        }
+
+        console.log(`[CALL-HYBRID-GPT] Generating prompt ${index + 1}/${promptSpecs.length}: ${spec.num}-${spec.name}`)
 
         const promptPrompt = `You are an expert developer coach. Generate ONE COMPLETE, ACTIONABLE implementation prompt.
 
@@ -647,6 +681,19 @@ ${buildingPlan}
           finishReason: promptResponse.choices[0].finish_reason,
           tokensUsed: promptResponse.usage
         })
+
+        // Update progress in database with more granular progress
+        const progressPercent = 45 + Math.round((index + 1) / promptSpecs.length * 30) // 45-75%
+        await supabase
+          .from('exports')
+          .update({
+            progress: progressPercent,
+            progress_message: `Generated prompt ${index + 1}/${promptSpecs.length}: ${spec.num}-${spec.name}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', exportId)
+
+        lastProgressUpdate = Date.now() // Reset timeout tracker
 
         const content = promptResponse.choices[0].message.content || ''
         const parsed = parseClaudeOutput(content)
