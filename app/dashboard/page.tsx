@@ -3,7 +3,7 @@ import { getUserSessions } from '@/lib/auth'
 import { getSubscriptionDetails } from '@/lib/subscription'
 import { branding } from '@/branding.config'
 import DotGrid from '@/components/backgrounds/DotGrid'
-import Sidebar from '@/components/dashboard/Sidebar'
+import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import GradientOrbs from '@/components/dashboard/GradientOrbs'
 import HeroBentoCard from '@/components/dashboard/HeroBentoCard'
 import RecentActivity from '@/components/dashboard/RecentActivity'
@@ -46,11 +46,8 @@ export default async function DashboardPage() {
       {/* Gradient Orbs */}
       <GradientOrbs />
 
-      {/* Sidebar */}
-      <Sidebar user={user} />
-
-      {/* Main Content - Responsive to sidebar */}
-      <div className="relative z-10 transition-all duration-300" style={{ marginLeft: '260px' }}>
+      {/* Dashboard Layout with Collapsible Sidebar */}
+      <DashboardLayout user={user}>
         <div className="max-w-[1400px] mx-auto px-12 py-12">
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-12 gap-8">
@@ -88,11 +85,11 @@ export default async function DashboardPage() {
                 <div
                   className="rounded-3xl p-16 text-center"
                   style={{
-                    background: `linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))`,
+                    background: `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`,
                     backdropFilter: 'blur(40px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
                   }}
                 >
                   <div className="max-w-md mx-auto">
@@ -139,7 +136,7 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     </div>
   )
 }

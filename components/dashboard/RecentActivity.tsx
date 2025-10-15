@@ -36,11 +36,11 @@ export default function RecentActivity() {
     <div
       className="rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl h-full"
       style={{
-        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))`,
+        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`,
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.25)',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
       }}
     >
       <h2

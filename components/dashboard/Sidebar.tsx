@@ -11,6 +11,8 @@ interface SidebarProps {
     full_name: string | null
     email: string
   }
+  isCollapsed: boolean
+  setIsCollapsed: (value: boolean) => void
 }
 
 const navItems = [
@@ -18,9 +20,8 @@ const navItems = [
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
 ]
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, isCollapsed, setIsCollapsed }: SidebarProps) {
   const pathname = usePathname()
-  const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
     <aside
