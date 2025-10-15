@@ -6,8 +6,6 @@ import DotGrid from '@/components/backgrounds/DotGrid'
 import Sidebar from '@/components/dashboard/Sidebar'
 import GradientOrbs from '@/components/dashboard/GradientOrbs'
 import HeroBentoCard from '@/components/dashboard/HeroBentoCard'
-import StatsTower from '@/components/dashboard/StatsTower'
-import QuickActions from '@/components/dashboard/QuickActions'
 import RecentActivity from '@/components/dashboard/RecentActivity'
 import BlueprintCard from '@/components/dashboard/BlueprintCard'
 
@@ -51,8 +49,8 @@ export default async function DashboardPage() {
       {/* Sidebar */}
       <Sidebar user={user} />
 
-      {/* Main Content */}
-      <div className="relative z-10 ml-[260px]">
+      {/* Main Content - Responsive to sidebar */}
+      <div className="relative z-10 transition-all duration-300" style={{ marginLeft: '260px' }}>
         <div className="max-w-[1400px] mx-auto px-12 py-12">
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-12 gap-8">
@@ -66,28 +64,13 @@ export default async function DashboardPage() {
               />
             </div>
 
-            {/* Stats Tower - 4 columns */}
+            {/* Recent Activity - 4 columns (side by side with hero) */}
             <div className="col-span-12 lg:col-span-4">
-              <StatsTower
-                totalBlueprints={subscriptionDetails?.statistics.totalBlueprints || 0}
-                inProgress={inProgressSessions.length}
-                completed={completedSessions.length}
-                memberSince={subscriptionDetails?.memberSince || 'N/A'}
-              />
-            </div>
-
-            {/* Quick Actions - 6 columns */}
-            <div className="col-span-12 md:col-span-6">
-              <QuickActions />
-            </div>
-
-            {/* Recent Activity - 6 columns */}
-            <div className="col-span-12 md:col-span-6">
               <RecentActivity />
             </div>
 
             {/* Your Blueprints Header */}
-            <div className="col-span-12">
+            <div className="col-span-12 mt-4">
               <h2
                 className="text-2xl font-bold mb-0"
                 style={{
@@ -99,24 +82,25 @@ export default async function DashboardPage() {
               </h2>
             </div>
 
-            {/* Blueprint Cards - Bento Grid */}
+            {/* Blueprint Cards - All Same Size */}
             {sessions.length === 0 ? (
               <div className="col-span-12">
                 <div
                   className="rounded-3xl p-16 text-center"
                   style={{
-                    background: `linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))`,
-                    backdropFilter: 'blur(24px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(24px) saturate(150%)',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                    background: `linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))`,
+                    backdropFilter: 'blur(40px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
                   }}
                 >
                   <div className="max-w-md mx-auto">
                     <div
                       className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
                       style={{
-                        background: `${branding.colors.accent}20`,
+                        background: `${branding.colors.accent}30`,
+                        backdropFilter: 'blur(10px)',
                       }}
                     >
                       <svg
@@ -140,7 +124,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <>
-                {sessions.map((session, index) => (
+                {sessions.map((session) => (
                   <BlueprintCard
                     key={session.id}
                     id={session.id}
@@ -148,7 +132,7 @@ export default async function DashboardPage() {
                     status={session.status as 'in_progress' | 'completed' | 'archived'}
                     completedPhases={session.completed_phases}
                     createdAt={session.created_at}
-                    isWide={index === 0 || index % 3 === 0}
+                    isWide={false}
                   />
                 ))}
               </>

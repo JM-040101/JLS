@@ -19,14 +19,13 @@ export default function HeroBentoCard({
 }: HeroBentoCardProps) {
   return (
     <div
-      className="rounded-3xl p-8 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group"
+      className="rounded-3xl p-8 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group h-full"
       style={{
-        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))`,
-        backdropFilter: 'blur(24px) saturate(150%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(150%)',
-        border: '1px solid rgba(255, 255, 255, 0.18)',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
-        minHeight: '420px',
+        background: `linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))`,
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
       }}
     >
       {/* Welcome Heading */}
