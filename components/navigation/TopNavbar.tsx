@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { branding } from '@/branding.config'
 import SharpAxeLogo from './SharpAxeLogo'
+import UserProfileDropdown from './UserProfileDropdown'
 
 interface TopNavbarProps {
   user: {
@@ -156,19 +157,8 @@ export default function TopNavbar({ user, searchQuery = '', onSearchChange, show
                 </div>
               )}
 
-              {/* User Avatar */}
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer transition-all duration-200 hover:scale-110"
-                style={{
-                  background: `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
-                  color: branding.colors.background,
-                  border: `2px solid ${branding.colors.gradientFrom}`,
-                  boxShadow: `0 0 12px rgba(6, 182, 212, 0.4)`,
-                }}
-                title={`${user.full_name || 'User'} - Pro Plan`}
-              >
-                {(user.full_name?.[0] || user.email[0]).toUpperCase()}
-              </div>
+              {/* User Profile Dropdown */}
+              <UserProfileDropdown user={user} />
 
               {/* Mobile Menu Toggle */}
               <button
