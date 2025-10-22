@@ -53,11 +53,8 @@ export default async function SettingsPage() {
               <div
                 className="rounded-3xl p-8"
                 style={{
-                  background: `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`,
-                  backdropFilter: 'blur(60px) saturate(200%)',
-                  WebkitBackdropFilter: 'blur(60px) saturate(200%)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <h2
@@ -117,11 +114,8 @@ export default async function SettingsPage() {
               <div
                 className="rounded-3xl p-8"
                 style={{
-                  background: `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`,
-                  backdropFilter: 'blur(60px) saturate(200%)',
-                  WebkitBackdropFilter: 'blur(60px) saturate(200%)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <h2
@@ -215,11 +209,8 @@ export default async function SettingsPage() {
               <div
                 className="rounded-3xl p-8"
                 style={{
-                  background: `linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01))`,
-                  backdropFilter: 'blur(60px) saturate(200%)',
-                  WebkitBackdropFilter: 'blur(60px) saturate(200%)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <h2
