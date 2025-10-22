@@ -10,12 +10,31 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   test:
     name: Run E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jls_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         browser: [chromium, firefox, webkit]
@@ -47,7 +66,7 @@ jobs:
 
       - name: Run database migrations
         env:
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jls_test
         run: |
           npx supabase db push --db-url "$DATABASE_URL"
 
@@ -98,13 +117,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: test-results-*
-          path: all-test-results/
+          path: all-test-results
+          merge-multiple: true
 
       - name: Merge playwright reports
         run: |
           npx playwright merge-reports \
             --reporter html \
-            all-test-results/
+            ./all-test-results
 
       - name: Upload merged report
         uses: actions/upload-artifact@v4

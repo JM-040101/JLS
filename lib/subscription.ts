@@ -129,16 +129,20 @@ export async function canCreateSession(userId: string): Promise<{
  */
 export async function getSubscriptionDetails(userId: string) {
   const supabase = createSupabaseServerClient()
-  
+
   const { data: profile } = await supabase
     .from('profiles')
-    .select('subscription_status, subscription_id, created_at, updated_at')
+    .select('subscription_status, subscription_id, created_at, updated_at, is_admin, role')
     .eq('id', userId)
     .single()
 
   if (!profile) {
     return null
   }
+
+  // Determine plan based on subscription status and admin role
+  const isAdmin = profile.is_admin === true || profile.role === 'admin' || profile.role === 'superadmin'
+  const plan = isAdmin ? 'Admin' : (profile.subscription_status === 'active' ? 'Pro' : 'Free')
 
   // Calculate usage statistics
   const { count: totalSessions } = await supabase
@@ -152,19 +156,40 @@ export async function getSubscriptionDetails(userId: string) {
     .eq('user_id', userId)
     .eq('status', 'completed')
 
+  // Get exports count
+  const { count: exportsCount } = await supabase
+    .from('exports')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  // Calculate API calls this month (using sessions as proxy)
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  const { count: apiCallsThisMonth } = await supabase
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', startOfMonth.toISOString())
+
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric'
   })
 
   return {
+    plan,
     status: profile.subscription_status,
     subscriptionId: profile.subscription_id,
     memberSince,
+    nextBillingDate: null, // TODO: Add when Stripe integration is complete
     statistics: {
       totalBlueprints: totalSessions || 0,
       completedBlueprints: completedSessions || 0,
-      inProgressBlueprints: (totalSessions || 0) - (completedSessions || 0)
+      inProgressBlueprints: (totalSessions || 0) - (completedSessions || 0),
+      apiCallsThisMonth: apiCallsThisMonth || 0,
+      exportsGenerated: exportsCount || 0
     }
   }
 }
