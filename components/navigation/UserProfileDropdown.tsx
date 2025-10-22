@@ -17,6 +17,11 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
+  const handleToggle = () => {
+    console.log('Toggle clicked, isOpen:', isOpen)
+    setIsOpen(!isOpen)
+  }
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,7 +53,7 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
     <div className="relative" ref={dropdownRef}>
       {/* User Avatar Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="flex items-center space-x-2 focus:outline-none group"
       >
         <div
@@ -83,6 +88,7 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
             WebkitBackdropFilter: 'blur(20px)',
             border: '1px solid rgba(6, 182, 212, 0.2)',
             boxShadow: '0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(6, 182, 212, 0.1)',
+            zIndex: 9999,
           }}
         >
           {/* User Info Header */}
