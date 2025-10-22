@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 84% 20%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 25% 42%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 206 100% 50%;
+    --primary: 206 100% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 188 100% 42%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 188 100% 55%;
+    --accent-foreground: 222 84% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-blueprint-navy-900;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-blueprint-navy-300 rounded-md;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-blueprint-navy-400;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/90 h-10 py-2 px-4;
+  }
+
+  .btn-outline {
+    @apply btn border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4;
+  }
+
+  .input {
+    @apply flex min-h-[2.5rem] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  textarea.input {
+    @apply resize-none leading-relaxed transition-all duration-200;
+  }
+
+  select.input {
+    @apply h-11 cursor-pointer;
+  }
+
+  input[type="text"].input,
+  input[type="email"].input,
+  input[type="password"].input {
+    @apply h-11;
+  }
+
+  .card {
+    @apply rounded-lg border bg-white text-blueprint-navy-900 shadow-sm;
+  }
+
+  .phase-progress {
+    @apply relative overflow-hidden rounded-full bg-muted h-2;
+  }
+
+  .phase-progress-bar {
+    @apply h-full bg-gradient-to-r from-secondary to-accent transition-all duration-500 ease-out;
+  }
+
+  .workflow-step {
+    @apply border border-border rounded-lg p-6 bg-background shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .workflow-step.active {
+    @apply border-primary shadow-md ring-2 ring-primary/20;
+  }
+
+  .workflow-step.completed {
+    @apply border-secondary bg-secondary/5;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
