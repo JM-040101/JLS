@@ -49,6 +49,40 @@ This document tracks all updates, changes, and improvements made to the SharpAxe
   - Removed complex glassmorphism in favor of standardized design
   - File: `app/dashboard/settings/page.tsx`
 
+### ⚡ Interactive Settings Page
+- **Fully Functional Settings**:
+  - Added editable name field with inline Edit/Save/Cancel buttons
+  - Implemented password change functionality with validation:
+    - Current password verification
+    - New password must be at least 8 characters
+    - Confirm password matching
+  - Added subscription management:
+    - "Upgrade to Pro" button for Free users (links to /pricing)
+    - "Manage Subscription" button for Pro users (Stripe portal placeholder)
+  - Real-time success/error messages with auto-dismiss
+  - Loading states for all actions (Save/Update buttons show progress)
+  - Files:
+    - `app/dashboard/settings/SettingsClient.tsx` (NEW)
+    - `app/dashboard/settings/actions.ts` (NEW)
+    - `app/dashboard/settings/page.tsx` (refactored)
+
+### 👤 User Profile Dropdown Menu
+- **Interactive Navigation Enhancement**:
+  - Replaced static user avatar with clickable dropdown menu
+  - Menu items:
+    - Settings (navigates to /dashboard/settings)
+    - Profile (navigates to /profile)
+    - Sign Out (with red hover effect)
+  - Features:
+    - Smooth animations and transitions
+    - Click-outside-to-close behavior
+    - Glassmorphism styling matching navbar
+    - User info header showing name and email
+    - Chevron icon indicates dropdown state
+  - Files:
+    - `components/navigation/UserProfileDropdown.tsx` (NEW)
+    - `components/navigation/TopNavbar.tsx` (integrated dropdown)
+
 ---
 
 ## [2025-10-22] - Major UI/UX Overhaul & Branding Update
