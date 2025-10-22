@@ -39,6 +39,16 @@ This document tracks all updates, changes, and improvements made to the SharpAxe
   - Step-by-step implementation guide
   - Testing strategy and success criteria
 
+### 🎨 Settings Page UI Fix
+- **Glass Effect Standardization**:
+  - Updated Settings page to match dashboard styling consistency
+  - Changed all three card sections to simple glass effect:
+    - Account Information card
+    - Subscription Details card
+    - Usage Statistics card
+  - Removed complex glassmorphism in favor of standardized design
+  - File: `app/dashboard/settings/page.tsx`
+
 ---
 
 ## [2025-10-22] - Major UI/UX Overhaul & Branding Update
