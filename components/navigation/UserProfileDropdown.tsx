@@ -19,8 +19,6 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log('🎯 DROPDOWN CLICKED! isOpen:', isOpen)
-    alert(`Dropdown clicked! Current state: ${isOpen ? 'OPEN' : 'CLOSED'}`)
     setIsOpen(!isOpen)
   }
 
