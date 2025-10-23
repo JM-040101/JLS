@@ -155,13 +155,14 @@ export async function createWorkflowSession(appDescription: string) {
 }
 
 /**
- * Get user's workflow sessions
+ * Get user's workflow sessions with export status
  */
 export async function getUserSessions() {
   const user = await requireAuth()
   const supabase = createSupabaseServerClient()
 
-  const { data, error } = await supabase
+  // Get sessions
+  const { data: sessions, error } = await supabase
     .from('sessions')
     .select('*')
     .eq('user_id', user.id)
@@ -171,5 +172,28 @@ export async function getUserSessions() {
     throw new Error(`Failed to fetch sessions: ${error.message}`)
   }
 
-  return data || []
+  // Get export history for these sessions
+  const sessionIds = sessions?.map(s => s.id) || []
+  const { data: exports } = await supabase
+    .from('export_history')
+    .select('session_id, created_at')
+    .in('session_id', sessionIds)
+    .order('created_at', { ascending: false })
+
+  // Create a map of session_id to latest export date
+  const exportMap = new Map()
+  exports?.forEach(exp => {
+    if (!exportMap.has(exp.session_id)) {
+      exportMap.set(exp.session_id, exp.created_at)
+    }
+  })
+
+  // Add export info to sessions
+  const sessionsWithExports = sessions?.map(session => ({
+    ...session,
+    last_exported: exportMap.get(session.id) || null,
+    has_been_exported: exportMap.has(session.id),
+  })) || []
+
+  return sessionsWithExports
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CheckCircle, Clock, Archive, Calendar, Eye } from 'lucide-react'
+import { CheckCircle, Clock, Archive, Calendar, Download } from 'lucide-react'
 import { branding } from '@/branding.config'
 
 interface BlueprintCardProps {
@@ -11,6 +11,8 @@ interface BlueprintCardProps {
   completedPhases: number
   totalPhases?: number
   createdAt: string
+  hasBeenExported?: boolean
+  lastExported?: string | null
   views?: number
   isWide?: boolean
 }
@@ -22,6 +24,8 @@ export default function BlueprintCard({
   completedPhases,
   totalPhases = 12,
   createdAt,
+  hasBeenExported = false,
+  lastExported = null,
   views = 0,
   isWide = false,
 }: BlueprintCardProps) {
@@ -68,13 +72,30 @@ export default function BlueprintCard({
           {title}
         </h3>
 
-        <div className="flex items-center space-x-2 text-xs mb-4" style={{ color: branding.colors.textMuted }}>
-          <span className="flex items-center">
+        <div className="flex items-center flex-wrap gap-2 text-xs mb-4">
+          <span className="flex items-center" style={{ color: branding.colors.textMuted }}>
             <StatusIcon className="w-3 h-3 mr-1" style={{ color: currentStatus.color }} />
             {currentStatus.label}
           </span>
-          <span>•</span>
-          <span>Phase {completedPhases}/{totalPhases}</span>
+          <span style={{ color: branding.colors.textMuted }}>•</span>
+          <span style={{ color: branding.colors.textMuted }}>Phase {completedPhases}/{totalPhases}</span>
+          {hasBeenExported && (
+            <>
+              <span style={{ color: branding.colors.textMuted }}>•</span>
+              <span
+                className="flex items-center px-2 py-0.5 rounded-full font-medium"
+                style={{
+                  background: `linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(20, 184, 166, 0.15))`,
+                  border: `1px solid rgba(6, 182, 212, 0.3)`,
+                  color: branding.colors.accent,
+                }}
+                title={lastExported ? `Exported on ${new Date(lastExported).toLocaleDateString()}` : 'Exported'}
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Exported
+              </span>
+            </>
+          )}
         </div>
 
         {/* Progress bar */}

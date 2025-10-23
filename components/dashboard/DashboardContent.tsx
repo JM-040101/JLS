@@ -13,6 +13,8 @@ interface Session {
   completed_phases: number
   created_at: string
   updated_at: string
+  last_exported: string | null
+  has_been_exported: boolean
 }
 
 interface DashboardContentProps {
@@ -143,6 +145,8 @@ export default function DashboardContent({
                 status={session.status as 'in_progress' | 'completed' | 'archived'}
                 completedPhases={session.completed_phases}
                 createdAt={session.created_at}
+                hasBeenExported={session.has_been_exported}
+                lastExported={session.last_exported}
                 isWide={false}
               />
             ))}
