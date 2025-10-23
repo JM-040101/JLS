@@ -51,7 +51,7 @@ export default function TopNavbar({ user, searchQuery = '', onSearchChange, show
         }}
       >
         <div
-          className="relative h-full rounded-2xl overflow-hidden transition-all duration-300"
+          className="relative h-full rounded-2xl overflow-visible transition-all duration-300"
           style={{
             background: scrolled
               ? 'rgba(18, 20, 28, 0.9)'
