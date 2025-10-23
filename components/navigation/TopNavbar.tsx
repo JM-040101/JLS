@@ -20,7 +20,6 @@ interface TopNavbarProps {
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Settings', href: '/dashboard/settings' },
 ]
 
 export default function TopNavbar({ user, searchQuery = '', onSearchChange, showSearch = false }: TopNavbarProps) {
@@ -133,7 +132,7 @@ export default function TopNavbar({ user, searchQuery = '', onSearchChange, show
                     onChange={(e) => onSearchChange?.(e.target.value)}
                     className="px-4 py-2 pl-10 rounded-xl text-sm font-medium transition-all duration-200 focus:outline-none"
                     style={{
-                      width: '250px',
+                      width: '400px',
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: `1px solid ${searchQuery ? branding.colors.accent : 'rgba(255, 255, 255, 0.1)'}`,
                       color: branding.colors.textHeading,
