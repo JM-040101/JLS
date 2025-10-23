@@ -17,8 +17,10 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  const handleToggle = () => {
-    console.log('Toggle clicked, isOpen:', isOpen)
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log('🎯 DROPDOWN CLICKED! isOpen:', isOpen)
+    alert(`Dropdown clicked! Current state: ${isOpen ? 'OPEN' : 'CLOSED'}`)
     setIsOpen(!isOpen)
   }
 
@@ -50,7 +52,7 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[9999]" ref={dropdownRef}>
       {/* User Avatar Button */}
       <button
         onClick={handleToggle}
@@ -81,14 +83,16 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-64 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute right-0 mt-2 w-64 rounded-2xl overflow-hidden"
           style={{
-            background: 'rgba(18, 20, 28, 0.95)',
+            background: 'rgba(18, 20, 28, 0.98)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(6, 182, 212, 0.2)',
-            boxShadow: '0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(6, 182, 212, 0.1)',
-            zIndex: 9999,
+            border: '2px solid rgba(6, 182, 212, 0.5)',
+            boxShadow: '0 12px 48px rgba(0, 0, 0, 0.8), 0 0 20px rgba(6, 182, 212, 0.3)',
+            zIndex: 99999,
+            position: 'absolute',
+            top: '100%',
           }}
         >
           {/* User Info Header */}
