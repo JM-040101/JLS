@@ -55,10 +55,20 @@ grep -r "Claude-.*\.md" README.md .claude/
 ## Database Schema
 
 Core tables with UUID primary keys and RLS:
-- `profiles` - User data linked to Supabase Auth
-- `sessions` - Workflow state tracking  
+- `profiles` - User data linked to Supabase Auth, subscription tier tracking
+  - New columns: `subscription_tier`, `active_projects_limit`, `monthly_exports_count`, `features_enabled` (JSONB)
+- `sessions` - Workflow state tracking
 - `answers` - Phase response storage
 - `outputs` - Generated file content
+- `subscription_tier_mapping` - Maps Stripe Price IDs to subscription tiers
+- `exports` - Export history for tracking monthly limits
+
+### Database Functions & Triggers
+
+- `set_tier_limits()` - Automatically sets project/export limits based on subscription tier
+- `check_project_limit_before_session()` - Validates project limit before session creation
+- `user_has_feature()` - Checks if user has access to specific features
+- Triggers enforce limits on tier changes and session creation
 
 All tables require RLS policies restricting access to user's own data.
 
@@ -93,10 +103,53 @@ export.zip/
 
 ## Subscription & Access Control
 
-- **Single Tier**: Pro £14.99/mo (annual discount available)
+### Multi-Tier Pricing System (GBP)
+
+- **Free**: £0/mo - 1 active project, 3 exports/month
+- **Essentials**: £7.99/mo, £79.99/yr - 5 projects, 25 exports/month, advanced prompts
+- **Premium**: £14.99/mo, £149.99/yr - 15 projects, unlimited exports, priority support (highlighted tier with ElectricBorder animation)
+- **Pro Studio**: £39.99/mo, £399.99/yr - Unlimited projects, API access, team collaboration, white-label
+- **Enterprise**: Custom pricing - Unlimited everything, dedicated support, SLA
+
+### Pricing Configuration
+
+- **Location**: `/lib/pricing.config.ts` - Centralized tier definitions, features, and limits
+- **Feature Flags**: `/lib/features.ts` - Tier-based access control system
+- **Database Schema**: `profiles.subscription_tier`, `subscription_tier_mapping` table
+- **Limits Enforcement**: Database triggers automatically set project/export limits based on tier
+
+### Access Control
+
 - **EU VAT Compliance**: Handled via Stripe Tax
 - **Grace Period**: 3 days for failed payments
-- **Webhook Processing**: Real-time subscription status updates
+- **Webhook Processing**: Real-time subscription status updates with tier-based limit updates
+- **RLS Policies**: Row-level security enforces tier-based access
+
+## UI Components
+
+### Landing Page (`/components/landing/landing-page.tsx`)
+
+- **Auto-hiding Navigation**: Scroll-aware nav bar that hides on scroll down, shows on scroll up
+- **Glass Morphism**: Backdrop blur effects with transparent cards throughout
+- **Branding**: Uses centralized color scheme from `/branding.config.ts`
+- **DotGrid Background**: Interactive dot grid with proximity effects
+- **Responsive Design**: Mobile-first approach with Tailwind breakpoints
+
+### Pricing Section (`/components/pricing/multi-tier-pricing-section.tsx`)
+
+- **Layout**: 2x2 grid for first 4 tiers + full-width horizontal Enterprise card
+- **ElectricBorder Component**: Animated rotating conic gradient border on Premium tier (`/components/ui/ElectricBorder.tsx`)
+- **Dynamic Pricing**: Monthly/Annual toggle with 17% annual savings badge
+- **Tier Detection**: Shows "Current Plan" badge for user's active tier
+- **Readability**: White text with text-shadow on Premium tier for contrast against cyan gradient
+- **Features Display**: Checkmarks with tier-specific feature lists
+
+### Design System
+
+- **Colors**: Defined in `/branding.config.ts` - Dark navy (#12141C) with cyan/teal accents (#06b6d4, #14b8a6)
+- **Typography**: Inter for body, Space Grotesk for headings, JetBrains Mono for code
+- **Animations**: CSS @property for smooth gradient rotations, 200ms transitions
+- **Glass Cards**: `backdrop-filter: blur(60px) saturate(200%)` with subtle borders
 
 ## Key Business Logic
 
@@ -105,6 +158,8 @@ export.zip/
 3. **Export Validation**: All phases must be complete before export
 4. **Rate Limiting**: 10 API requests/minute per user
 5. **File Bundling**: Use JSZip for export packaging
+6. **Tier Limits**: Database-enforced project and export limits per tier
+7. **Feature Gating**: Server-side feature access validation via `hasFeature()` function
 
 ## MCP Server Usage
 

@@ -9,6 +9,8 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import 'highlight.js/styles/github-dark.css'
 import { branding } from '@/branding.config'
+import DotGrid from '@/components/backgrounds/DotGrid'
+import GradientOrbs from '@/components/dashboard/GradientOrbs'
 
 interface PlanPreviewProps {
   params: {
@@ -1048,47 +1050,152 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: branding.colors.background }}>
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" style={{
-            color: branding.colors.textHeading,
-            fontFamily: branding.fonts.heading
-          }}>
-            📋 Your SaaS Building Plan
-          </h1>
-          <p className="text-lg" style={{ color: branding.colors.textHeading }}>
-            Review and edit your plan before generating the final documentation
-          </p>
+    <div className="min-h-screen relative" style={{ background: branding.colors.background }}>
+      {/* Dot Grid Background */}
+      <div className="fixed inset-0 z-0">
+        <DotGrid
+          dotSize={3}
+          gap={25}
+          baseColor={branding.colors.divider}
+          activeColor={branding.colors.accent}
+          proximity={120}
+          shockRadius={200}
+          shockStrength={3}
+        />
+      </div>
+
+      {/* Gradient Orbs */}
+      <GradientOrbs />
+
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-12">
+        {/* Header - Enhanced with glass card */}
+        <div className="text-center mb-12 relative">
+          {/* Glass card background */}
+          <div
+            className="rounded-3xl p-8 mb-8"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+            }}
+          >
+            {/* Accent line */}
+            <div
+              className="w-20 h-1 mx-auto mb-6 rounded-full"
+              style={{
+                background: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+                boxShadow: `0 0 20px ${branding.colors.accentGlow}`
+              }}
+            />
+
+            <h1
+              className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r"
+              style={{
+                backgroundImage: `linear-gradient(135deg, ${branding.colors.textHeading} 0%, ${branding.colors.accent} 50%, ${branding.colors.gradientTo} 100%)`,
+                fontFamily: branding.fonts.heading,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              📋 Your SaaS Building Plan
+            </h1>
+            <p className="text-lg max-w-2xl mx-auto" style={{
+              color: branding.colors.textMuted,
+              lineHeight: '1.6'
+            }}>
+              Review and edit your plan before generating the final documentation
+            </p>
+          </div>
         </div>
 
-        {/* Plan Content */}
-        <div className="rounded-2xl overflow-hidden mb-8 border" style={{
-          backgroundColor: branding.colors.surface,
-          borderColor: branding.colors.divider,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+        {/* Plan Content - Glass Effect */}
+        <div className="rounded-3xl overflow-hidden mb-8" style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+          backdropFilter: 'blur(60px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(60px) saturate(200%)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
         }}>
           {!isEditing ? (
             <>
               {/* Plan Display with Beautiful Markdown Rendering */}
               <div className="p-8 sm:p-10 lg:p-12">
-                <article className="prose prose-lg prose-invert max-w-none prose-headings:font-bold prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:pb-3 prose-h1:border-b-4 prose-h1:border-accent prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b-2 prose-h2:border-accent prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-6 prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-4 prose-p:leading-relaxed prose-p:mb-4 prose-strong:font-semibold prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:shadow-lg prose-pre:rounded-lg prose-pre:border prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-a:no-underline hover:prose-a:underline prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-hr:my-8 prose-table:border-collapse prose-th:border prose-th:px-4 prose-th:py-2 prose-td:border prose-td:px-4 prose-td:py-2" style={{
-                  color: branding.colors.textHeading,
-                  '--tw-prose-body': branding.colors.textHeading,
-                  '--tw-prose-headings': branding.colors.textHeading,
-                  '--tw-prose-bold': branding.colors.textHeading,
-                  '--tw-prose-code': branding.colors.accent,
-                  '--tw-prose-pre-bg': branding.colors.primary,
-                  '--tw-prose-pre-code': branding.colors.textHeading,
-                  '--tw-prose-links': branding.colors.accent,
-                  '--tw-prose-quotes': branding.colors.textHeading,
-                  '--tw-prose-quote-borders': branding.colors.accent,
-                  '--tw-prose-hr': branding.colors.accent,
-                  '--tw-prose-th-borders': branding.colors.divider,
-                  '--tw-prose-td-borders': branding.colors.divider,
-                  '--tw-prose-counters': branding.colors.textHeading,
-                  '--tw-prose-bullets': branding.colors.accent,
+                <style jsx>{`
+                  article :global(h1) {
+                    color: #FFFFFF !important;
+                    font-size: 2.5rem !important;
+                    font-weight: 700 !important;
+                    margin-top: 3rem !important;
+                    margin-bottom: 1.5rem !important;
+                    padding-bottom: 0.75rem !important;
+                    border-bottom: 3px solid ${branding.colors.accent} !important;
+                  }
+
+                  article :global(h2) {
+                    color: #FFFFFF !important;
+                    font-size: 2rem !important;
+                    font-weight: 700 !important;
+                    margin-top: 2.5rem !important;
+                    margin-bottom: 1.25rem !important;
+                    padding-bottom: 0.5rem !important;
+                    border-bottom: 2px solid ${branding.colors.accent}80 !important;
+                  }
+
+                  article :global(h3) {
+                    color: #FFFFFF !important;
+                    font-size: 1.5rem !important;
+                    font-weight: 700 !important;
+                    margin-top: 2rem !important;
+                    margin-bottom: 1rem !important;
+                  }
+
+                  article :global(h4) {
+                    color: ${branding.colors.accent} !important;
+                    font-size: 1.25rem !important;
+                    font-weight: 600 !important;
+                    margin-top: 1.5rem !important;
+                    margin-bottom: 0.75rem !important;
+                  }
+
+                  article :global(p) {
+                    color: #D1D5DB !important;
+                    font-size: 1.1rem !important;
+                    line-height: 1.8 !important;
+                    margin-bottom: 1.25rem !important;
+                  }
+
+                  article :global(strong) {
+                    color: #FFFFFF !important;
+                    font-weight: 700 !important;
+                  }
+
+                  article :global(ul), article :global(ol) {
+                    margin: 1.5rem 0 !important;
+                  }
+
+                  article :global(li) {
+                    color: #D1D5DB !important;
+                    margin: 0.5rem 0 !important;
+                    line-height: 1.7 !important;
+                  }
+
+                  article :global(code) {
+                    background: rgba(6, 182, 212, 0.2) !important;
+                    color: ${branding.colors.accent} !important;
+                    padding: 0.25rem 0.5rem !important;
+                    border-radius: 0.375rem !important;
+                    font-size: 0.95rem !important;
+                  }
+
+                  article :global(hr) {
+                    border-color: ${branding.colors.accent}60 !important;
+                    margin: 2.5rem 0 !important;
+                  }
+                `}</style>
+                <article className="prose prose-lg prose-invert max-w-none" style={{
+                  color: '#D1D5DB',
                 } as React.CSSProperties}>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -1118,29 +1225,27 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
 
               {/* Edit Button */}
               <div className="px-8 py-6 border-t" style={{
-                backgroundColor: branding.colors.background,
-                borderColor: branding.colors.divider
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                borderColor: 'rgba(255, 255, 255, 0.1)'
               }}>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:-translate-y-0.5"
+                  className="px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:-translate-y-1"
                   style={{
-                    backgroundColor: branding.colors.secondaryLight,
-                    color: branding.colors.textHeading,
-                    border: `2px solid ${branding.colors.accent}`,
+                    background: `linear-gradient(135deg, ${branding.colors.accent}20, ${branding.colors.gradientTo}20)`,
+                    color: branding.colors.accent,
+                    border: `1px solid ${branding.colors.accent}60`,
                     boxShadow: `0 4px 12px -1px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.accent
+                    e.currentTarget.style.background = `linear-gradient(135deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`
                     e.currentTarget.style.color = branding.colors.background
                     e.currentTarget.style.boxShadow = `0 10px 20px -3px rgba(0, 0, 0, 0.6), 0 0 25px ${branding.colors.accentGlow}`
-                    e.currentTarget.style.transform = 'translateY(-3px)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.color = branding.colors.textHeading
+                    e.currentTarget.style.background = `linear-gradient(135deg, ${branding.colors.accent}20, ${branding.colors.gradientTo}20)`
+                    e.currentTarget.style.color = branding.colors.accent
                     e.currentTarget.style.boxShadow = `0 4px 12px -1px rgba(0, 0, 0, 0.4), 0 0 15px ${branding.colors.accentGlow}`
-                    e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
                   ✏️ Edit Plan
@@ -1158,10 +1263,10 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   <textarea
                     value={editedPlan}
                     onChange={(e) => setEditedPlan(e.target.value)}
-                    className="w-full h-[600px] p-4 border-2 rounded-lg focus:ring-2 font-mono text-sm resize-y transition-all"
+                    className="w-full h-[600px] p-4 rounded-xl focus:ring-2 font-mono text-sm resize-y transition-all"
                     style={{
-                      backgroundColor: branding.colors.background,
-                      borderColor: branding.colors.divider,
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                       color: branding.colors.textHeading,
                       fontFamily: branding.fonts.mono
                     }}
@@ -1170,7 +1275,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                       e.currentTarget.style.boxShadow = `0 0 0 3px ${branding.colors.accentGlow}`
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = branding.colors.divider
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                     placeholder="Edit your plan using Markdown formatting..."
@@ -1208,17 +1313,20 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
                   <button
                     onClick={cancelEditing}
                     disabled={isSaving}
-                    className="px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: branding.colors.secondary,
+                      background: 'rgba(255, 255, 255, 0.05)',
                       color: branding.colors.text,
-                      border: `1px solid ${branding.colors.divider}`
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(10px)'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                      e.currentTarget.style.borderColor = branding.colors.accent
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = branding.colors.secondary
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
                     }}
                   >
                     Cancel
@@ -1236,22 +1344,23 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               <div className="flex gap-4">
                 <button
                   onClick={() => router.push(`/workflow/${params.id}`)}
-                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-1"
                   style={{
-                    backgroundColor: branding.colors.secondary,
+                    background: 'rgba(255, 255, 255, 0.05)',
                     color: branding.colors.textHeading,
-                    border: `2px solid ${branding.colors.accent}`,
-                    boxShadow: `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    backdropFilter: 'blur(10px)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.borderColor = branding.colors.accentLight
-                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
-                    e.currentTarget.style.borderColor = branding.colors.accent
-                    e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)'
                   }}
                 >
                   ← Back to Workflow
@@ -1287,22 +1396,23 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
               <div className="flex gap-4">
                 <button
                   onClick={() => router.push('/dashboard')}
-                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-0.5"
+                  className="flex-1 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:-translate-y-1"
                   style={{
-                    backgroundColor: branding.colors.secondary,
+                    background: 'rgba(255, 255, 255, 0.05)',
                     color: branding.colors.textHeading,
-                    border: `2px solid ${branding.colors.accent}`,
-                    boxShadow: `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    backdropFilter: 'blur(10px)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondaryLight
-                    e.currentTarget.style.borderColor = branding.colors.accentLight
-                    e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.borderColor = branding.colors.accent
+                    e.currentTarget.style.boxShadow = `0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px ${branding.colors.accentGlow}`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = branding.colors.secondary
-                    e.currentTarget.style.borderColor = branding.colors.accent
-                    e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px ${branding.colors.accentGlow}`
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)'
                   }}
                 >
                   ← Back to Dashboard
@@ -1335,10 +1445,13 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
           </>
         )}
 
-        {/* Info Box */}
-        <div className="mt-8 rounded-lg p-6 border" style={{
-          backgroundColor: `${branding.colors.info}15`,
-          borderColor: branding.colors.info
+        {/* Info Box - Glass Effect */}
+        <div className="mt-8 rounded-2xl p-6" style={{
+          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(20, 184, 166, 0.05))',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: '1px solid rgba(6, 182, 212, 0.3)',
+          boxShadow: '0 4px 16px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
         }}>
           <h3 className="font-semibold mb-2" style={{
             color: branding.colors.textHeading,

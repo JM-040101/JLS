@@ -3,6 +3,8 @@
 import { stripe, SUBSCRIPTION_STATUS, GRACE_PERIOD_DAYS } from './config'
 import { createSupabaseServerClient } from '../supabase-server'
 import type { SubscriptionStatus } from './config'
+import { getTierFromPriceId } from '@/lib/pricing.config'
+import type { SubscriptionTier } from '@/lib/pricing.config'
 
 export interface Subscription {
   id: string
@@ -11,6 +13,7 @@ export interface Subscription {
   subscriptionId: string
   priceId: string
   status: SubscriptionStatus
+  tier?: SubscriptionTier
   currentPeriodStart: Date
   currentPeriodEnd: Date
   cancelAt?: Date
@@ -34,7 +37,11 @@ export class SubscriptionManager {
     trialEnd?: Date
   }): Promise<Subscription> {
     const supabase = createSupabaseServerClient()
-    
+
+    // Determine tier from price ID
+    const tier = getTierFromPriceId(data.priceId)
+
+    // Update subscription record in subscriptions table
     const { data: subscription, error } = await supabase
       .from('subscriptions')
       .upsert({
@@ -57,7 +64,61 @@ export class SubscriptionManager {
       throw new Error(`Failed to upsert subscription: ${error.message}`)
     }
 
+    // Update profiles table with tier info
+    await this.updateProfileTier(data.userId, data.customerId, data.priceId, tier, data.status)
+
     return this.formatSubscription(subscription)
+  }
+
+  // Update profile with tier information
+  private async updateProfileTier(
+    userId: string,
+    customerId: string,
+    priceId: string,
+    tier: SubscriptionTier | null,
+    status: SubscriptionStatus
+  ): Promise<void> {
+    const supabase = createSupabaseServerClient()
+
+    const updateData: any = {
+      stripe_customer_id: customerId,
+      stripe_price_id: priceId,
+      subscription_status: status,
+      updated_at: new Date().toISOString()
+    }
+
+    // Set tier if we have one
+    if (tier) {
+      updateData.subscription_tier = tier
+
+      // Track tier changes
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', userId)
+        .single()
+
+      if (currentProfile && currentProfile.subscription_tier !== tier) {
+        updateData.previous_tier = currentProfile.subscription_tier
+        const tierOrder: SubscriptionTier[] = ['free', 'essentials', 'premium', 'pro_studio', 'enterprise']
+        const isUpgrade = tierOrder.indexOf(tier) > tierOrder.indexOf(currentProfile.subscription_tier)
+        if (isUpgrade) {
+          updateData.tier_upgraded_at = new Date().toISOString()
+        } else {
+          updateData.tier_downgraded_at = new Date().toISOString()
+        }
+      }
+    }
+
+    // Handle cancellation - downgrade to free
+    if (status === 'canceled' || status === 'incomplete_expired') {
+      updateData.subscription_tier = 'free'
+    }
+
+    await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
   }
 
   // Get subscription by user ID

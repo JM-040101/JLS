@@ -73,17 +73,27 @@ export async function POST(request: NextRequest) {
     // Update session progress if phase is complete
     if (isComplete) {
       const newProgress = Math.max(session.current_phase, phaseNumber)
-      
+
+      // Count unique phases that have answers
+      const { data: answeredPhases } = await supabase
+        .from('answers')
+        .select('phase_number')
+        .eq('session_id', sessionId)
+
+      const uniquePhases = new Set(answeredPhases?.map(a => a.phase_number) || [])
+      const completedPhases = uniquePhases.size
+
       await supabase
         .from('sessions')
         .update({
           current_phase: newProgress,
+          completed_phases: completedPhases,
           updated_at: new Date().toISOString()
         })
         .eq('id', sessionId)
 
       // Check if all phases are complete
-      if (newProgress === 12) {
+      if (completedPhases === 12) {
         await supabase
           .from('sessions')
           .update({

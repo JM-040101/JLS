@@ -142,7 +142,6 @@ export default function DashboardContent({
                 key={session.id}
                 id={session.id}
                 title={session.app_description}
-                status={session.status as 'in_progress' | 'completed' | 'archived'}
                 completedPhases={session.completed_phases}
                 createdAt={session.created_at}
                 hasBeenExported={session.has_been_exported}

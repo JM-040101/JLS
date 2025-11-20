@@ -7,7 +7,6 @@ import { branding } from '@/branding.config'
 interface BlueprintCardProps {
   id: string
   title: string
-  status: 'in_progress' | 'completed' | 'archived'
   completedPhases: number
   totalPhases?: number
   createdAt: string
@@ -20,7 +19,6 @@ interface BlueprintCardProps {
 export default function BlueprintCard({
   id,
   title,
-  status,
   completedPhases,
   totalPhases = 12,
   createdAt,
@@ -31,28 +29,36 @@ export default function BlueprintCard({
 }: BlueprintCardProps) {
   const progress = (completedPhases / totalPhases) * 100
 
-  const statusConfig = {
-    in_progress: {
-      icon: Clock,
-      label: 'In Progress',
-      color: branding.colors.warning,
-      gradient: 'linear-gradient(90deg, #f59e0b, #f97316)',
-    },
-    completed: {
-      icon: CheckCircle,
-      label: 'Completed',
-      color: branding.colors.success,
-      gradient: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
-    },
-    archived: {
-      icon: Archive,
-      label: 'Archived',
-      color: branding.colors.textMuted,
-      gradient: 'linear-gradient(90deg, #6b7280, #4b5563)',
-    },
+  // Calculate status dynamically based on actual completion
+  const getStatus = () => {
+    if (completedPhases === totalPhases) {
+      return {
+        icon: CheckCircle,
+        label: 'Completed',
+        color: branding.colors.success,
+        gradient: `linear-gradient(90deg, ${branding.colors.gradientFrom}, ${branding.colors.gradientTo})`,
+        type: 'completed' as const,
+      }
+    } else if (completedPhases > 0) {
+      return {
+        icon: Clock,
+        label: 'In Progress',
+        color: branding.colors.warning,
+        gradient: 'linear-gradient(90deg, #f59e0b, #f97316)',
+        type: 'in_progress' as const,
+      }
+    } else {
+      return {
+        icon: Clock,
+        label: 'Not Started',
+        color: branding.colors.textMuted,
+        gradient: 'linear-gradient(90deg, #6b7280, #4b5563)',
+        type: 'not_started' as const,
+      }
+    }
   }
 
-  const currentStatus = statusConfig[status]
+  const currentStatus = getStatus()
   const StatusIcon = currentStatus.icon
 
   return (
@@ -120,7 +126,7 @@ export default function BlueprintCard({
           </span>
 
           <Link
-            href={status === 'completed' ? `/preview-plan/${id}` : `/workflow/${id}`}
+            href={currentStatus.type === 'completed' ? `/preview-plan/${id}` : `/workflow/${id}`}
             className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md hover:scale-105"
             style={{
               backgroundColor: branding.colors.secondary,
@@ -128,7 +134,7 @@ export default function BlueprintCard({
               border: `1px solid ${branding.colors.divider}`,
             }}
           >
-            {status === 'completed' ? 'View' : 'Continue'}
+            {currentStatus.type === 'completed' ? 'View' : 'Continue'}
           </Link>
         </div>
       </div>

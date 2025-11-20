@@ -10,11 +10,28 @@ export const maxDuration = 60 // Allow up to 60 seconds for export generation
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseServerClient()
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check export limit based on tier
+    const { canExport } = await import('@/lib/subscription')
+    const exportCheck = await canExport(user.id)
+
+    if (!exportCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Export limit reached',
+          message: exportCheck.reason,
+          currentCount: exportCheck.currentCount,
+          limit: exportCheck.limit,
+          upgradeRequired: true
+        },
+        { status: 403 }
+      )
     }
 
     // Parse request body
