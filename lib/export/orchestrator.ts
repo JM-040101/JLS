@@ -35,6 +35,9 @@ export class ExportOrchestrator {
 
   // Main export method
   async exportSession(request: ExportRequest): Promise<ExportResult> {
+    const supabase = createSupabaseServerClient()
+    let exportId: string | undefined
+
     try {
       // Validate request
       const validation = await this.validateExportRequest(request)
@@ -72,11 +75,67 @@ export class ExportOrchestrator {
         }
       }
 
+      // Create export record immediately with processing status
+      const { data: exportRecord, error: exportError } = await supabase
+        .from('exports')
+        .insert({
+          session_id: request.sessionId,
+          user_id: request.userId,
+          filename: `blueprint-${request.sessionId}.zip`,
+          path: `exports/${request.userId}/${request.sessionId}`,
+          url: '', // Will update after upload
+          size: 0, // Will update after generation
+          status: 'processing',
+          progress: 0,
+          progress_message: 'Initializing export...',
+          metadata: {
+            format: request.format,
+            includePrompts: request.includePrompts,
+            includeDocumentation: request.includeDocumentation
+          },
+          version: request.version || '1.0.0'
+        })
+        .select()
+        .single()
+
+      if (exportError || !exportRecord) {
+        throw new Error(`Failed to create export record: ${exportError?.message}`)
+      }
+
+      exportId = exportRecord.id
+
+      // Update progress: Generating modules
+      await supabase
+        .from('exports')
+        .update({
+          progress: 20,
+          progress_message: 'Generating modules...'
+        })
+        .eq('id', exportId)
+
       // Generate modules from answers
       const modules = await this.generateModules(answers, sessionData)
 
+      // Update progress: Determining version
+      await supabase
+        .from('exports')
+        .update({
+          progress: 40,
+          progress_message: 'Preparing export bundle...'
+        })
+        .eq('id', exportId)
+
       // Determine version
       const version = await this.determineVersion(request.sessionId, request.version)
+
+      // Update progress: Creating ZIP
+      await supabase
+        .from('exports')
+        .update({
+          progress: 60,
+          progress_message: 'Bundling files...'
+        })
+        .eq('id', exportId)
 
       // Generate ZIP bundle
       const zipBuffer = await ZipBundler.createExportFromSession(
@@ -91,12 +150,30 @@ export class ExportOrchestrator {
       // Validate generated export
       const exportValidation = this.validateExportSize(zipBuffer)
       if (!exportValidation.valid) {
+        await supabase
+          .from('exports')
+          .update({
+            status: 'failed',
+            error_message: 'Export too large',
+            progress: 0
+          })
+          .eq('id', exportId)
+
         return {
           success: false,
           error: 'Export too large',
           validation: exportValidation
         }
       }
+
+      // Update progress: Uploading
+      await supabase
+        .from('exports')
+        .update({
+          progress: 80,
+          progress_message: 'Uploading export...'
+        })
+        .eq('id', exportId)
 
       // Upload to storage
       const uploadResult = await this.storage.uploadExport(
@@ -116,18 +193,40 @@ export class ExportOrchestrator {
       )
 
       if (!uploadResult.success) {
+        await supabase
+          .from('exports')
+          .update({
+            status: 'failed',
+            error_message: uploadResult.error || 'Upload failed',
+            progress: 0
+          })
+          .eq('id', exportId)
+
         return {
           success: false,
           error: uploadResult.error || 'Upload failed'
         }
       }
 
+      // Update export record with final details
+      await supabase
+        .from('exports')
+        .update({
+          status: 'completed',
+          progress: 100,
+          progress_message: 'Export complete!',
+          url: uploadResult.url || '',
+          size: uploadResult.size || zipBuffer.length,
+          files: modules.map(m => m.name)
+        })
+        .eq('id', exportId)
+
       // Track export
       await this.trackExport(request.sessionId, request.userId, version.version, zipBuffer.length)
 
       return {
         success: true,
-        exportId: request.sessionId,
+        exportId: exportId,
         downloadUrl: uploadResult.url,
         size: uploadResult.size,
         version: version.version,
@@ -136,6 +235,19 @@ export class ExportOrchestrator {
 
     } catch (error: any) {
       console.error('Export orchestration failed:', error)
+
+      // Update export record as failed if it was created
+      if (exportId) {
+        await supabase
+          .from('exports')
+          .update({
+            status: 'failed',
+            error_message: error.message || 'Export generation failed',
+            progress: 0
+          })
+          .eq('id', exportId)
+      }
+
       return {
         success: false,
         error: error.message || 'Export generation failed'

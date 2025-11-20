@@ -55,15 +55,17 @@ export async function POST(request: NextRequest) {
       version: body.version
     }
 
-    // Generate export using orchestrator
+    // Generate export using orchestrator (this creates an export record immediately)
     const orchestrator = new ExportOrchestrator()
+
+    // Start export processing - this is now async with progress tracking
     const result = await orchestrator.exportSession(exportRequest)
 
     if (!result.success) {
       return NextResponse.json(
-        { 
+        {
           error: result.error || 'Export generation failed',
-          validation: result.validation 
+          validation: result.validation
         },
         { status: 400 }
       )
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
       downloadUrl: result.downloadUrl,
       size: result.size,
       version: result.version,
+      status: 'completed',
       message: 'Export generated successfully'
     })
 
