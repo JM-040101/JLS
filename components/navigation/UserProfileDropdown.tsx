@@ -14,6 +14,7 @@ interface UserProfileDropdownProps {
 
 export default function UserProfileDropdown({ user }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -35,17 +36,27 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
   }, [])
 
   const handleSignOut = async () => {
+    if (isSigningOut) return // Prevent multiple clicks
+
+    setIsSigningOut(true)
+    setIsOpen(false)
+
     try {
+      // Call sign-out API
       const response = await fetch('/auth/sign-out', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      if (response.ok || response.redirected) {
-        router.push('/')
-        router.refresh()
-      }
+      // Always redirect, even if there's an error
+      // This ensures the user is logged out client-side
+      window.location.href = '/'
     } catch (error) {
       console.error('Sign out error:', error)
+      // Force redirect even on error
+      window.location.href = '/'
     }
   }
 
@@ -167,21 +178,30 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
 
             <button
               onClick={handleSignOut}
+              disabled={isSigningOut}
               className="w-full flex items-center space-x-3 px-4 py-2.5 transition-all"
               style={{
-                color: branding.colors.textMuted,
+                color: isSigningOut ? branding.colors.textMuted : branding.colors.textMuted,
+                opacity: isSigningOut ? 0.6 : 1,
+                cursor: isSigningOut ? 'not-allowed' : 'pointer',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
-                e.currentTarget.style.color = '#ef4444'
+                if (!isSigningOut) {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                  e.currentTarget.style.color = '#ef4444'
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = branding.colors.textMuted
+                if (!isSigningOut) {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = branding.colors.textMuted
+                }
               }}
             >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Sign Out</span>
+              <LogOut className={`w-4 h-4 ${isSigningOut ? 'animate-spin' : ''}`} />
+              <span className="text-sm font-medium">
+                {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+              </span>
             </button>
           </div>
         </div>

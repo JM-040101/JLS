@@ -4,24 +4,29 @@ import { NextResponse } from 'next/server'
 
 export async function POST() {
   const supabase = createRouteHandlerClient({ cookies })
-  
+
   try {
+    // Sign out from Supabase
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'))
+
+    // Return JSON success instead of redirect
+    // Client will handle the redirect
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
     console.error('Sign out error:', error)
-    return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'))
+    // Still return success to allow client-side redirect
+    return NextResponse.json({ success: true }, { status: 200 })
   }
 }
 
 export async function GET() {
   const supabase = createRouteHandlerClient({ cookies })
-  
+
   try {
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'))
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
     console.error('Sign out error:', error)
-    return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'))
+    return NextResponse.json({ success: true }, { status: 200 })
   }
 }
