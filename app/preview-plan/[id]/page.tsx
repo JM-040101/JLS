@@ -849,7 +849,7 @@ export default function PlanPreview({ params }: PlanPreviewProps) {
             </div>
             <div className="flex justify-between items-center text-xs" style={{ color: branding.colors.textMuted }}>
               <span>Elapsed: {formatElapsedTime(exportStartTime)}</span>
-              <span>Estimated: 5-7 minutes</span>
+              <span>Estimated: 10-15 minutes</span>
             </div>
           </div>
 
