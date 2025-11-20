@@ -4,23 +4,48 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  
-  // Refresh session if expired
-  const { data: { session } } = await supabase.auth.getSession()
-
-  // Protected routes that require authentication
-  const protectedRoutes = ['/dashboard', '/workflow', '/export', '/profile']
-  const authRoutes = ['/auth/sign-in', '/auth/sign-up']
   const currentPath = req.nextUrl.pathname
 
+  // Skip middleware for static assets and public routes
+  if (
+    currentPath.startsWith('/_next') ||
+    currentPath.startsWith('/api') ||
+    currentPath === '/favicon.ico' ||
+    currentPath === '/' ||
+    currentPath === '/pricing' ||
+    currentPath === '/solutions'
+  ) {
+    return res
+  }
+
+  const supabase = createMiddlewareClient({ req, res })
+
+  // Refresh session if expired - with timeout
+  const sessionPromise = supabase.auth.getSession()
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Session timeout')), 5000)
+  )
+
+  let session
+  try {
+    const result = await Promise.race([sessionPromise, timeoutPromise]) as any
+    session = result?.data?.session
+  } catch (error) {
+    console.error('Middleware session check timeout:', error)
+    return res // Continue without session check on timeout
+  }
+
+  // Protected routes that require authentication
+  const protectedRoutes = ['/dashboard', '/workflow', '/export', '/profile', '/settings', '/billing']
+  const authRoutes = ['/auth/sign-in', '/auth/sign-up']
+
   // Check if current path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isProtectedRoute = protectedRoutes.some(route =>
     currentPath.startsWith(route)
   )
 
   // Check if current path is auth route
-  const isAuthRoute = authRoutes.some(route => 
+  const isAuthRoute = authRoutes.some(route =>
     currentPath.startsWith(route)
   )
 
@@ -36,38 +61,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  // Check subscription for workflow routes
-  if (currentPath.startsWith('/workflow') && session) {
-    // Fetch user profile to check subscription and admin status
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status, role, is_admin')
-      .eq('id', session.user.id)
-      .single()
-
-    // Check if user is admin - admins bypass subscription requirement
-    const isAdmin = profile?.is_admin === true || profile?.role === 'admin' || profile?.role === 'superadmin'
-
-    // Redirect to pricing if no active subscription AND not an admin
-    if (!isAdmin && (!profile || profile.subscription_status !== 'active')) {
-      return NextResponse.redirect(new URL('/pricing', req.url))
-    }
-  }
+  // Note: Removed subscription check from middleware - moved to page-level for better performance
+  // Subscription validation now happens in the workflow pages themselves
 
   return res
 }
 
-// Apply middleware to specific routes
+// Apply middleware only to specific routes that need auth
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes (handled separately)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    '/dashboard/:path*',
+    '/workflow/:path*',
+    '/export/:path*',
+    '/profile/:path*',
+    '/settings/:path*',
+    '/billing/:path*',
+    '/auth/sign-in',
+    '/auth/sign-up',
   ],
 }
