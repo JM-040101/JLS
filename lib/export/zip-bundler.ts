@@ -52,7 +52,8 @@ export class ZipBundler {
   static async createExportFromSession(
     sessionData: any,
     modules: ClaudeModule[],
-    answers: Record<number, any>
+    answers: Record<number, any>,
+    aiDocuments?: { readme: string; claudeMd: string; completePlan: string }
   ): Promise<Buffer> {
     const variables: TemplateVariables = {
       businessName: sessionData.name,
@@ -70,13 +71,36 @@ export class ZipBundler {
     // Initialize generators
     const claudeOpsGen = new ClaudeOpsGenerator(variables)
     const promptGen = new PromptGenerator(modules, sessionData.business_idea, sessionData.name)
-    
+
     // Generate all files
     const files: ExportedFile[] = []
 
-    // Core documentation
-    files.push(claudeOpsGen.generateClaudeMd())
-    files.push(claudeOpsGen.generateReadme())
+    // Core documentation - use AI-generated if available, otherwise use templates
+    if (aiDocuments) {
+      // Use AI-generated README and CLAUDE.md (Claude Sonnet 4 with knowledge bases)
+      files.push({
+        path: 'README.md',
+        content: aiDocuments.readme,
+        type: 'markdown',
+        size: aiDocuments.readme.length
+      })
+      files.push({
+        path: 'CLAUDE.md',
+        content: aiDocuments.claudeMd,
+        type: 'markdown',
+        size: aiDocuments.claudeMd.length
+      })
+      files.push({
+        path: 'COMPLETE-PLAN.md',
+        content: aiDocuments.completePlan,
+        type: 'markdown',
+        size: aiDocuments.completePlan.length
+      })
+    } else {
+      // Fallback to template-based generation
+      files.push(claudeOpsGen.generateClaudeMd())
+      files.push(claudeOpsGen.generateReadme())
+    }
 
     // Module documentation
     files.push(...claudeOpsGen.generateModuleReadmes())

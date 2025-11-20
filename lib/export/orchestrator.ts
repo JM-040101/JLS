@@ -104,12 +104,24 @@ export class ExportOrchestrator {
 
       exportId = exportRecord.id
 
+      // Update progress: AI Processing with Claude
+      await supabase
+        .from('exports')
+        .update({
+          progress: 10,
+          progress_message: 'AI processing blueprint with Claude Sonnet 4...'
+        })
+        .eq('id', exportId)
+
+      // Call transform-blueprint API to get AI-generated documents
+      const aiDocuments = await this.transformBlueprintWithAI(request.sessionId)
+
       // Update progress: Generating modules
       await supabase
         .from('exports')
         .update({
-          progress: 20,
-          progress_message: 'Generating modules...'
+          progress: 30,
+          progress_message: 'Generating module structure...'
         })
         .eq('id', exportId)
 
@@ -120,7 +132,7 @@ export class ExportOrchestrator {
       await supabase
         .from('exports')
         .update({
-          progress: 40,
+          progress: 50,
           progress_message: 'Preparing export bundle...'
         })
         .eq('id', exportId)
@@ -132,19 +144,20 @@ export class ExportOrchestrator {
       await supabase
         .from('exports')
         .update({
-          progress: 60,
-          progress_message: 'Bundling files...'
+          progress: 70,
+          progress_message: 'Bundling files with AI-generated content...'
         })
         .eq('id', exportId)
 
-      // Generate ZIP bundle
+      // Generate ZIP bundle with AI-generated documents
       const zipBuffer = await ZipBundler.createExportFromSession(
         {
           ...sessionData,
           version: version.version
         },
         modules,
-        answers
+        answers,
+        aiDocuments // Pass AI-generated README, CLAUDE.md, COMPLETE-PLAN
       )
 
       // Validate generated export
@@ -170,7 +183,7 @@ export class ExportOrchestrator {
       await supabase
         .from('exports')
         .update({
-          progress: 80,
+          progress: 90,
           progress_message: 'Uploading export...'
         })
         .eq('id', exportId)
@@ -299,6 +312,191 @@ export class ExportOrchestrator {
   }
 
   // Private methods
+
+  private async transformBlueprintWithAI(sessionId: string): Promise<{
+    readme: string
+    claudeMd: string
+    completePlan: string
+  }> {
+    // Import the AI transformation logic from transform-blueprint API
+    const Anthropic = (await import('@anthropic-ai/sdk')).default
+    const fs = await import('fs/promises')
+    const path = await import('path')
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    })
+
+    const supabase = createSupabaseServerClient()
+
+    // Fetch session
+    const { data: session } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single()
+
+    if (!session) {
+      throw new Error('Session not found')
+    }
+
+    // Fetch phase templates
+    const { data: phaseTemplates } = await supabase
+      .from('phase_templates')
+      .select('*')
+      .order('phase_number', { ascending: true })
+
+    // Fetch answers
+    const { data: answers } = await supabase
+      .from('answers')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('phase_number', { ascending: true })
+
+    if (!phaseTemplates || !answers) {
+      throw new Error('Failed to fetch data for AI transformation')
+    }
+
+    // Load knowledge base files
+    const workflowInstructions = await this.loadKnowledgeFile('ai-workflow/12-phase-workflow-instructions.md')
+    const knowledgeBase1 = await this.loadKnowledgeFile('ai-workflow/knowledge-base-1.md')
+    const knowledgeBase2 = await this.loadKnowledgeFile('ai-workflow/knowledge-base-2.md')
+
+    // Transform answers into structured blueprint data
+    const blueprintData = this.formatBlueprintData(session, phaseTemplates, answers)
+
+    // Generate documents in parallel using Claude Sonnet 4
+    const [readme, claudeMd, completePlan] = await Promise.all([
+      this.generateWithClaude(anthropic, 'README', blueprintData, workflowInstructions, knowledgeBase1, knowledgeBase2),
+      this.generateWithClaude(anthropic, 'CLAUDE', blueprintData, workflowInstructions, knowledgeBase1, knowledgeBase2),
+      this.generateWithClaude(anthropic, 'COMPLETE_PLAN', blueprintData, workflowInstructions, knowledgeBase1, knowledgeBase2)
+    ])
+
+    return { readme, claudeMd, completePlan }
+  }
+
+  private async loadKnowledgeFile(relativePath: string): Promise<string> {
+    try {
+      const fs = await import('fs/promises')
+      const path = await import('path')
+      const filePath = path.join(process.cwd(), relativePath)
+      return await fs.readFile(filePath, 'utf-8')
+    } catch (error) {
+      console.error(`Failed to load knowledge file: ${relativePath}`, error)
+      return ''
+    }
+  }
+
+  private formatBlueprintData(session: any, phases: any[], answers: any[]): string {
+    let output = `# SaaS Blueprint: ${session.app_description}\n\n`
+    output += `**Created**: ${new Date(session.created_at).toLocaleDateString()}\n\n`
+
+    phases.forEach((phase) => {
+      const phaseAnswers = answers.filter((a) => a.phase_number === phase.phase_number)
+
+      output += `## Phase ${phase.phase_number}: ${phase.title}\n\n`
+      output += `${phase.description}\n\n`
+
+      phaseAnswers.forEach((answer) => {
+        output += `**Q: ${answer.question_text}**\n`
+        output += `A: ${answer.answer_text}\n\n`
+      })
+
+      output += `---\n\n`
+    })
+
+    return output
+  }
+
+  private async generateWithClaude(
+    anthropic: any,
+    docType: 'README' | 'CLAUDE' | 'COMPLETE_PLAN',
+    blueprintData: string,
+    workflowInstructions: string,
+    knowledgeBase1: string,
+    knowledgeBase2: string
+  ): Promise<string> {
+    const prompts = {
+      README: `You are a senior technical writer creating a professional README.md for a SaaS product.
+
+Using the blueprint data below, create an executive summary README that:
+- Provides a clear project overview (NOT question/answer format)
+- Highlights the problem being solved and target market
+- Outlines the core features and value proposition
+- Describes the tech stack and architecture at a high level
+- Includes a "Getting Started" section with clear next steps
+- Is written for developers, investors, and collaborators
+- Uses professional markdown formatting with appropriate sections
+
+Make it compelling, concise, and action-oriented. Focus on WHAT the product does and WHY it matters, not the raw Q&A.`,
+
+      CLAUDE: `You are a senior SaaS architect creating Claude Code implementation instructions (CLAUDE.md).
+
+Using the blueprint data and knowledge bases below, create a comprehensive CLAUDE.md that:
+- Provides clear guidance for Claude Code to build this SaaS application
+- Breaks down implementation into logical modules (auth, database, API, UI, payments, etc.)
+- Includes specific technical decisions from the blueprint (framework choices, database schema, etc.)
+- Provides executable prompts for each major feature
+- References the knowledge base patterns and best practices
+- Follows the SaaS Playbook structure for scalability and maintainability
+- Includes code organization, file structure, and naming conventions
+- Adds security considerations and compliance requirements
+
+Format this as a technical specification that Claude Code can follow to build the complete application.
+
+Reference these knowledge bases for best practices:
+${knowledgeBase1.substring(0, 5000)}
+
+${knowledgeBase2.substring(0, 5000)}`,
+
+      COMPLETE_PLAN: `You are a product strategist creating a comprehensive SaaS product plan.
+
+Using the blueprint data below, create a COMPLETE-PLAN.md that:
+- Transforms all 12 phases into a cohesive narrative
+- Provides strategic context for each major decision
+- Includes implementation priorities and trade-offs
+- Maps out the roadmap from MVP → V1.5 → Long-term
+- Highlights risks, assumptions, and validation plans
+- Adds specific metrics and success criteria
+- Connects all phases into a unified product vision
+
+Write this as a strategic document that founders can use to:
+- Pitch to investors
+- Brief their development team
+- Make product decisions
+- Track progress against the original vision
+
+Make it comprehensive but scannable with clear sections and bullet points.`,
+    }
+
+    const systemPrompt = `${prompts[docType]}
+
+IMPORTANT GUIDELINES:
+- Transform the Q&A format into professional prose
+- Use the knowledge bases to add best practices and patterns
+- Be specific and actionable, not generic
+- Focus on the unique aspects of this SaaS product
+- Write at a senior technical level
+- Use markdown formatting for clarity
+
+Workflow Context:
+${workflowInstructions.substring(0, 3000)}`
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: `Here is the SaaS blueprint data to transform:\n\n${blueprintData}`,
+        },
+      ],
+    })
+
+    const textContent = message.content.find((block: any) => block.type === 'text')
+    return textContent ? textContent.text : ''
+  }
 
   private async validateExportRequest(request: ExportRequest): Promise<ExportValidation> {
     const errors: string[] = []
